@@ -72,7 +72,7 @@ public class SecurityConfig {
             "https://*.vercel.app"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
@@ -96,6 +96,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Allow preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Allow favicon, error, and health endpoints
+                .requestMatchers("/favicon.ico", "/error", "/health", "/api/health").permitAll()
                 // Public authentication endpoints
                 .requestMatchers("/auth/**", "/api/auth/**").permitAll()
                 // Public read-only browsing for books and categories
