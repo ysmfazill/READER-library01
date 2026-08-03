@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AuthNavbar from '../components/AuthNavbar';
 import { AuthInput } from '../components/AuthInput';
 import { AuthButton } from '../components/AuthButton';
+import { useAuth } from '../context/AuthContext';
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState({ email: '', password: '', remember: false });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate auth (no backend)
-    setTimeout(() => {
+    setErrorMsg(null);
+    try {
+      await login({ email: form.email, password: form.password });
+      // Navigation is now handled natively by AuthRoute when isAuthenticated becomes true
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Invalid email or password. Please try again.';
+      setErrorMsg(msg);
+    } finally {
       setLoading(false);
-      navigate('/home');
-    }, 1500);
+    }
   };
 
   return (
@@ -34,7 +41,7 @@ const Login: React.FC = () => {
                 Discover Smarter.<br />Read Better.
               </h1>
               <p className="text-[18px] text-white/80 max-w-md mx-auto leading-relaxed">
-                Find books you'll love with AI-powered recommendations tailored to your interests.
+                Find books you'll love with personalized recommendations tailored to your interests.
               </p>
             </div>
           </div>
@@ -51,7 +58,7 @@ const Login: React.FC = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
 
               {/* Header */}
-              <div className="text-center mb-10">
+              <div className="text-center mb-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-6">
                   <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                     auto_stories
@@ -64,6 +71,12 @@ const Login: React.FC = () => {
                   Sign in to continue your personalized reading journey.
                 </p>
               </div>
+
+              {errorMsg && (
+                <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium text-center">
+                  {errorMsg}
+                </div>
+              )}
 
               {/* Form */}
               <form className="space-y-6" onSubmit={handleSubmit}>
@@ -131,7 +144,7 @@ const Login: React.FC = () => {
                   <AuthButton
                     type="submit"
                     loading={loading}
-                    className="accent-gradient w-full py-4 text-white font-bold rounded-lg shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+                    className="accent-gradient w-full py-4 text-white font-bold rounded-lg shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Login
                   </AuthButton>
@@ -158,7 +171,7 @@ const Login: React.FC = () => {
           {/* Mobile branding */}
           <div className="lg:hidden absolute bottom-8 text-center w-full">
             <p className="text-xs font-semibold text-on-surface-variant/40 uppercase tracking-widest">
-              Aethelgard AI Research Suite
+              Smart Library Recommendation System
             </p>
           </div>
         </section>

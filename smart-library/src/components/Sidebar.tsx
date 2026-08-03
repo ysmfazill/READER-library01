@@ -1,43 +1,41 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useUserProfile } from '../context/UserProfileContext';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
-  { icon: 'dashboard',         label: 'Dashboard',         to: '/home' },
-  { icon: 'search',            label: 'Search Books',      to: '/search' },
-  { icon: 'neurology',         label: 'AI Recommendations',to: '/recommendations' },
-  { icon: 'forum',             label: 'AI Chat',           to: '/chat' },
-  { icon: 'favorite',          label: 'Favorites',         to: '/favorites' },
-  { icon: 'history',           label: 'Reading History',   to: '/history' },
+  { icon: 'dashboard',         label: 'Dashboard',          to: '/home' },
+  { icon: 'star',              label: 'Recommended Books',  to: '/recommendations' },
+  { icon: 'search',            label: 'Search Books',       to: '/search' },
+  { icon: 'favorite',          label: 'Favorites',          to: '/favorites' },
+  { icon: 'collections_bookmark', label: 'Collections',       to: '/collections' },
+  { icon: 'history',           label: 'Reading History',    to: '/history' },
+  { icon: 'monitoring',        label: 'Analytics',          to: '/analytics' },
+  { icon: 'trophy',            label: 'Leaderboard',        to: '/leaderboard' },
 ];
 
 const ACCOUNT_ITEMS = [
-  { icon: 'person',                label: 'Profile',   to: '/profile' },
-  { icon: 'settings',              label: 'Settings',  to: '/settings' },
-  { icon: 'admin_panel_settings',  label: 'Admin',     to: '/admin' },
+  { icon: 'person',               label: 'Profile',  to: '/profile' },
+  { icon: 'settings',             label: 'Settings', to: '/settings' },
 ];
 
-const Sidebar: React.FC = () => {
-  const { profile } = useUserProfile();
+const ADMIN_ITEM = { icon: 'admin_panel_settings', label: 'Admin Panel', to: '/admin' };
 
-  const filteredAccountItems = ACCOUNT_ITEMS.filter(item => {
-    if (item.to === '/admin') {
-      return profile.role === 'ADMIN';
-    }
-    return true;
-  });
+const Sidebar: React.FC = () => {
+  const { isAdmin } = useAuth();
+
+  const accountItems = isAdmin ? [...ACCOUNT_ITEMS, ADMIN_ITEM] : ACCOUNT_ITEMS;
 
   return (
     <aside className="w-[280px] bg-surface/60 backdrop-blur-xl border-r border-white/20 flex flex-col py-8 gap-y-2 hidden md:flex shrink-0">
       {/* Brand */}
       <div className="px-8 mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 accent-gradient rounded-xl flex items-center justify-center text-white">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
             <span className="material-symbols-outlined">auto_stories</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-primary leading-none">Aethelgard</h1>
-            <p className="text-xs text-on-surface-variant opacity-70">AI Research Suite</p>
+            <h1 className="text-2xl font-bold text-primary leading-none">Smart Library</h1>
+            <p className="text-xs text-on-surface-variant opacity-70">Recommendation System</p>
           </div>
         </div>
       </div>
@@ -67,12 +65,12 @@ const Sidebar: React.FC = () => {
         <div className="mt-8 pt-8 border-t border-outline-variant/30 px-6">
           <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-4">Account</p>
           <div className="space-y-1">
-            {filteredAccountItems.map(({ icon, label, to }) => (
+            {accountItems.map(({ icon, label, to }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }: { isActive: boolean }) =>
-                `flex items-center gap-4 py-2 text-sm font-medium transition-colors ${
+                  `flex items-center gap-4 py-2 text-sm font-medium transition-colors ${
                     isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
                   }`
                 }
@@ -87,10 +85,13 @@ const Sidebar: React.FC = () => {
 
       {/* New Research CTA */}
       <div className="px-6 mt-auto">
-        <button className="w-full py-4 accent-gradient text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 transition-transform">
-          <span className="material-symbols-outlined">add</span>
-          <span>New Research</span>
-        </button>
+        <NavLink
+          to="/search"
+          className="w-full py-4 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          <span className="material-symbols-outlined">search</span>
+          <span>Find Books</span>
+        </NavLink>
       </div>
     </aside>
   );

@@ -3,18 +3,19 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { BookCard } from '../components/BookCard';
 import { useFavorites } from '../context/FavoritesContext';
-import { RECOMMENDED_BOOKS } from '../utils/placeholderData';
+import { useAuth } from '../context/AuthContext';
 import type { Book } from '../types';
 
 type SortOption = 'newest' | 'highest_rated' | 'alphabetical';
 
 const Favorites: React.FC = () => {
-  const { favoriteIds, removeFavorite } = useFavorites();
+  const { favorites, count, removeFavorite } = useFavorites();
+  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [search, setSearch] = useState('');
 
-  // Derive the actual Book objects from the favorited IDs
-  const favoriteBooks: Book[] = RECOMMENDED_BOOKS.filter(b => favoriteIds.has(b.id));
+  // Use full Book[] from API-backed context (no placeholderData)
+  const favoriteBooks: Book[] = favorites;
 
   // Filter by search
   const filtered = favoriteBooks.filter(b =>
@@ -32,7 +33,7 @@ const Favorites: React.FC = () => {
     return (b.publicationYear ?? 0) - (a.publicationYear ?? 0) || parseInt(b.id) - parseInt(a.id);
   });
 
-  const count = favoriteIds.size;
+  // count comes from the API-backed FavoritesContext
 
   const SORT_OPTIONS: { value: SortOption; label: string; icon: string }[] = [
     { value: 'newest',        label: 'Newest First',    icon: 'schedule'    },
@@ -53,8 +54,11 @@ const Favorites: React.FC = () => {
       <main className="md:ml-sidebar-width pt-28 px-container-padding pb-section-gap max-w-[1440px] mx-auto min-h-screen">
 
         {/* ── Header ── */}
-        <section className="mb-10">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <section className="mb-10 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-container shrink-0">
+            <img src={user?.avatar?.includes('/') ? user.avatar : `/avatars/${user?.avatar || 'avatar1.png'}`} alt="Avatar" className="w-full h-full object-cover" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
+          </div>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-1">
             <div>
               <h1 className="font-headline-lg text-headline-lg mb-1 flex items-center gap-3">
                 <span
@@ -167,7 +171,7 @@ const Favorites: React.FC = () => {
                 {search && ` matching "${search}"`}
               </p>
               <button
-                onClick={() => favoriteIds.forEach(id => removeFavorite(id))}
+                onClick={() => favorites.forEach((b: Book) => removeFavorite(b.id))}
                 className="text-label-sm text-on-surface-variant hover:text-red-500 flex items-center gap-1 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">delete_sweep</span>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useUserProfile } from '../context/UserProfileContext';
-import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
+import { computeStreak } from '../utils/mappers';
 
 // ── Editable field row ────────────────────────────────────────
 interface FieldRowProps {
@@ -92,12 +93,24 @@ const TIER_COLORS: Record<string, string> = {
   Librarian:  'bg-secondary/10 text-secondary border border-secondary/20',
 };
 
+// ── Avatar Options ─────────────────────────────────────────────
+const AVATAR_OPTIONS = [
+  { id: 'avatar1.png', name: 'Scholar' },
+  { id: 'avatar2.png', name: 'Explorer' },
+  { id: 'avatar3.png', name: 'Reader' },
+  { id: 'avatar4.png', name: 'Innovator' },
+  { id: 'avatar5.png', name: 'Book Lover' },
+];
+
 // ── Main Page ─────────────────────────────────────────────────
 const Profile: React.FC = () => {
+  const { user } = useAuth();
   const { profile, updateProfile } = useUserProfile();
-  const { favoriteIds } = useFavorites();
-  const { completedBooks, inProgressBooks } = useReadingHistory();
+  const { completedBooks, inProgressBooks, historyEntries } = useReadingHistory();
   const [saveNotice, setSaveNotice] = useState(false);
+
+  // Computed streak from real history data
+  const streak = computeStreak(historyEntries);
 
   const handleSave = (name: string, value: string) => {
     let finalValue = value;
@@ -109,11 +122,32 @@ const Profile: React.FC = () => {
     setTimeout(() => setSaveNotice(false), 2500);
   };
 
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      if (user?.id) {
+        try {
+          const [userStats, userAchievements] = await Promise.all([
+            import('../services/analyticsService').then(m => m.analyticsService.getUserStatistics(user.id)),
+            import('../services/analyticsService').then(m => m.analyticsService.getUserAchievements(user.id))
+          ]);
+          setStats(userStats);
+          setAchievements(userAchievements);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    loadStats();
+  }, [user?.id]);
+
   const statCards = [
     { label: 'Books Completed',  value: completedBooks.length,    icon: 'check_circle',   color: 'text-emerald-600', bg: 'bg-emerald-50'    },
     { label: 'In Progress',      value: inProgressBooks.length,   icon: 'menu_book',      color: 'text-primary',     bg: 'bg-primary/10'    },
-    { label: 'Saved Favorites',  value: favoriteIds.size,         icon: 'favorite',       color: 'text-red-500',     bg: 'bg-red-50'        },
-    { label: 'Reading Streak',   value: '14 days',                icon: 'local_fire_department', color: 'text-orange-500', bg: 'bg-orange-50' },
+    { label: 'Global Rank',      value: stats?.globalRank ? `#${stats.globalRank}` : '—', icon: 'public', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Reading Streak',   value: streak > 0 ? `${streak} days` : '—', icon: 'local_fire_department', color: 'text-orange-500', bg: 'bg-orange-50' },
   ];
 
   return (
@@ -142,8 +176,8 @@ const Profile: React.FC = () => {
             {/* Avatar + Identity */}
             <div className="glass-card rounded-2xl p-8 flex flex-col items-center text-center gap-4">
               <div className="relative group">
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl">
-                  <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
+                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl bg-surface-container">
+                  <img src={profile.avatar.includes('/') ? profile.avatar : `/avatars/${profile.avatar || 'avatar1.png'}`} alt={profile.name} className="w-full h-full object-cover" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
                 </div>
                 {/* Avatar change overlay (UI only) */}
                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
@@ -197,15 +231,40 @@ const Profile: React.FC = () => {
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider font-bold">Interests</h3>
-                <button className="text-label-sm text-primary font-semibold hover:underline">Edit</button>
+                <a href="/welcome" className="text-label-sm text-primary font-semibold hover:underline">Edit</a>
               </div>
               <div className="flex flex-wrap gap-2">
-                {['Artificial Intelligence', 'Machine Learning', 'Philosophy', 'Data Science', 'Science'].map(tag => (
-                  <span key={tag} className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-label-sm font-semibold">
-                    {tag}
-                  </span>
-                ))}
+                {profile.interests && profile.interests.length > 0 ? (
+                  profile.interests.map(interest => (
+                    <span key={interest.id} className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-label-sm font-semibold">
+                      {interest.name}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-label-sm text-on-surface-variant/60 italic">No interests selected yet. <a href="/welcome" className="text-primary underline">Select interests</a></p>
+                )}
               </div>
+            </div>
+
+            {/* Achievements */}
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider font-bold">Achievements</h3>
+                <span className="text-label-sm font-bold text-primary">{achievements.length} Unlocked</span>
+              </div>
+              {achievements.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {achievements.map(ach => (
+                    <div key={ach.id} className="bg-surface-container-low rounded-xl p-3 flex flex-col items-center text-center gap-1 border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default group" title={ach.description}>
+                      <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">{ach.icon}</span>
+                      <span className="text-xs font-bold leading-tight line-clamp-1">{ach.name}</span>
+                      <span className="text-[10px] text-on-surface-variant">{new Date(ach.unlockedAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-label-sm text-on-surface-variant/60 italic text-center py-4">Read books to unlock achievements!</p>
+              )}
             </div>
           </div>
 
@@ -219,7 +278,7 @@ const Profile: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="font-headline-md text-body-lg font-bold">Edit Profile</h2>
-                  <p className="text-label-md text-on-surface-variant">Your changes are saved instantly to local storage.</p>
+                <p className="text-label-md text-on-surface-variant">Changes to name and email are saved to the server.</p>
                 </div>
               </div>
 
@@ -230,6 +289,34 @@ const Profile: React.FC = () => {
               <FieldRow label="Location"   name="location" value={profile.location} onSave={handleSave} placeholder="City, Country" />
               <FieldRow label="Website"    name="website"  value={profile.website}  onSave={handleSave} placeholder="yourwebsite.com" />
               <FieldRow label="Role"       name="role"     value={profile.role || 'USER'} onSave={handleSave} placeholder="USER or ADMIN" />
+            </div>
+
+            {/* Avatar Gallery */}
+            <div className="glass-card rounded-2xl p-8">
+              <h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider font-bold mb-6 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>imagesmode</span>
+                Choose Your Avatar
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                {AVATAR_OPTIONS.map((avatar) => {
+                  const isSelected = profile.avatar === avatar.id || profile.avatar?.endsWith(avatar.id);
+                  return (
+                    <button
+                      key={avatar.id}
+                      onClick={() => handleSave('avatar', avatar.id)}
+                      className={`relative flex flex-col items-center gap-3 p-4 rounded-2xl transition-all duration-300 ${isSelected ? 'bg-primary/10 border-2 border-primary shadow-md scale-[1.02]' : 'bg-surface-container-low border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container hover:shadow-sm'}`}
+                    >
+                      <img src={`/avatars/${avatar.id}`} alt={avatar.name} className="w-16 h-16 rounded-full object-cover shadow-sm bg-white" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
+                      <span className={`text-label-sm font-semibold ${isSelected ? 'text-primary' : 'text-on-surface'}`}>{avatar.name}</span>
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Danger zone (UI only) */}

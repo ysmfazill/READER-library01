@@ -1,0 +1,22 @@
+# General
+.idea/
+.vscode/
+*.log
+.DS_Store
+
+# Frontend
+smart-library/node_modules/
+smart-library/dist/
+smart-library/.env
+smart-library/.env.*.local
+smart-library/npm-debug.log*
+smart-library/yarn-error.log*
+smart-library/yarn-debug.log*
+
+# Backend
+smart-library-backend/target/
+smart-library-backend/bin/
+smart-library-backend/.env
+smart-library-backend/.mvn/
+smart-library-backend/HELP.md
+smart-library-backend/*.iml

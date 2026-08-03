@@ -1,107 +1,152 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-
-export interface ReadingEntry {
-  bookId: string;
-  progress: number;          // 0–100
-  startedAt: string;         // ISO date string
-  completedAt?: string;      // ISO date string, set when progress === 100
-  lastReadAt: string;        // ISO date string
-  totalMinutesRead: number;  // Simulated reading time in minutes
-}
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useAuth } from './AuthContext';
+import { historyService } from '../services/historyService';
+import type { HistoryEntry } from '../types';
+import { mapHistoryDTO } from '../utils/mappers';
 
 interface ReadingHistoryContextType {
-  history: Map<string, ReadingEntry>;
-  startReading: (bookId: string) => void;
-  updateProgress: (bookId: string, progress: number) => void;
-  markCompleted: (bookId: string) => void;
-  getEntry: (bookId: string) => ReadingEntry | undefined;
+  historyEntries: HistoryEntry[];
+  inProgressBooks: HistoryEntry[];
+  completedBooks: HistoryEntry[];
+  loading: boolean;
+  startReading: (bookId: string) => Promise<void>;
+  updateProgress: (bookId: string, progress: number) => Promise<void>;
+  markCompleted: (bookId: string) => Promise<void>;
+  getEntry: (bookId: string) => HistoryEntry | undefined;
   isReading: (bookId: string) => boolean;
   isCompleted: (bookId: string) => boolean;
-  inProgressBooks: ReadingEntry[];
-  completedBooks: ReadingEntry[];
+  reload: () => Promise<void>;
 }
 
 const ReadingHistoryContext = createContext<ReadingHistoryContextType | undefined>(undefined);
 
-// Helper to get a random reading time based on progress
-const estimateMinutes = (progress: number) => Math.round((progress / 100) * 480);
-
-// Seed dummy history so the page isn't empty on first load
-const SEED_HISTORY: ReadingEntry[] = [
-  { bookId: 'cr1', progress: 65, startedAt: '2024-07-10T09:00:00Z', lastReadAt: '2024-07-25T20:30:00Z', totalMinutesRead: 312 },
-  { bookId: 'cr2', progress: 30, startedAt: '2024-07-18T14:00:00Z', lastReadAt: '2024-07-27T22:00:00Z', totalMinutesRead: 144 },
-  { bookId: '3',   progress: 100, startedAt: '2024-06-01T08:00:00Z', completedAt: '2024-07-01T20:00:00Z', lastReadAt: '2024-07-01T20:00:00Z', totalMinutesRead: 480 },
-  { bookId: '5',   progress: 100, startedAt: '2024-05-10T10:00:00Z', completedAt: '2024-06-15T18:00:00Z', lastReadAt: '2024-06-15T18:00:00Z', totalMinutesRead: 396 },
-];
-
-const buildSeed = (): Map<string, ReadingEntry> => {
-  const m = new Map<string, ReadingEntry>();
-  SEED_HISTORY.forEach(e => m.set(e.bookId, e));
-  return m;
-};
-
 export const ReadingHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [history, setHistory] = useState<Map<string, ReadingEntry>>(buildSeed);
+  const { user, isAuthenticated } = useAuth();
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
 
-  const now = () => new Date().toISOString();
+  // Derived lists
+  const inProgressBooks = useMemo(
+    () => entries.filter(e => !e.completed && e.progress < 100),
+    [entries]
+  );
+  const completedBooks = useMemo(
+    () => entries.filter(e => e.completed || e.progress >= 100),
+    [entries]
+  );
 
-  const startReading = useCallback((bookId: string) => {
-    setHistory(prev => {
-      if (prev.has(bookId)) return prev; // already started
-      const next = new Map(prev);
-      next.set(bookId, {
+  // Load history from API
+  const load = useCallback(async () => {
+    if (!user?.id || !isAuthenticated) {
+      setEntries([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await historyService.getReadingHistory(user.id);
+      if (mountedRef.current) {
+        const content = res?.content || (Array.isArray(res) ? res : []);
+        setEntries(content.map(mapHistoryDTO));
+      }
+    } catch {
+      // silent fail — start with empty history
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [user?.id, isAuthenticated]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    load();
+    return () => { mountedRef.current = false; };
+  }, [load]);
+
+  const startReading = useCallback(async (bookId: string) => {
+    if (!user?.id) return;
+
+    // Optimistic: add a stub entry immediately
+    setEntries(prev => {
+      if (prev.some(e => e.bookId === bookId)) return prev;
+      const stub: HistoryEntry = {
+        id: `temp-${bookId}`,
         bookId,
+        book: { id: bookId, title: '', author: '', cover: '', rating: 0, category: '' },
         progress: 1,
-        startedAt: now(),
-        lastReadAt: now(),
-        totalMinutesRead: 1,
-      });
-      return next;
+        completed: false,
+        lastReadAt: new Date().toISOString(),
+      };
+      return [...prev, stub];
     });
-  }, []);
 
-  const updateProgress = useCallback((bookId: string, progress: number) => {
-    setHistory(prev => {
-      const existing = prev.get(bookId);
-      const clamped = Math.min(100, Math.max(0, progress));
-      const next = new Map(prev);
-      next.set(bookId, {
-        ...(existing ?? { bookId, startedAt: now() }),
-        progress: clamped,
-        lastReadAt: now(),
-        completedAt: clamped === 100 ? now() : existing?.completedAt,
-        totalMinutesRead: estimateMinutes(clamped),
-      });
-      return next;
-    });
-  }, []);
+    try {
+      await historyService.startReading(user.id, Number(bookId));
+      await load(); // Reload to get proper server data with embedded book info
+    } catch {
+      // Revert if API call fails
+      setEntries(prev => prev.filter(e => e.bookId !== bookId));
+    }
+  }, [user?.id, load]);
 
-  const markCompleted = useCallback((bookId: string) => {
-    updateProgress(bookId, 100);
+  const updateTimeouts = useRef<{ [key: string]: ReturnType<typeof setTimeout> }>({});
+
+  const updateProgress = useCallback(async (bookId: string, progress: number) => {
+    if (!user?.id) return;
+
+    // Optimistic update
+    setEntries(prev => prev.map(e =>
+      e.bookId === bookId
+        ? { ...e, progress, completed: progress >= 100, lastReadAt: new Date().toISOString() }
+        : e
+    ));
+
+    // Debounce the API call
+    if (updateTimeouts.current[bookId]) {
+      clearTimeout(updateTimeouts.current[bookId]);
+    }
+
+    updateTimeouts.current[bookId] = setTimeout(async () => {
+      try {
+        await historyService.updateProgress(user.id, Number(bookId), progress);
+      } catch {
+        // If update fails, reload from server
+        await load();
+      }
+    }, 1000); // 1-second debounce
+  }, [user?.id, load]);
+
+  const markCompleted = useCallback(async (bookId: string) => {
+    await updateProgress(bookId, 100);
   }, [updateProgress]);
 
-  const getEntry = useCallback((bookId: string) => history.get(bookId), [history]);
-  const isReading = useCallback((bookId: string) => {
-    const e = history.get(bookId);
-    return !!e && e.progress < 100;
-  }, [history]);
-  const isCompleted = useCallback((bookId: string) => {
-    const e = history.get(bookId);
-    return !!e && e.progress >= 100;
-  }, [history]);
-
-  const entries = Array.from(history.values());
-  const inProgressBooks = entries.filter(e => e.progress < 100).sort(
-    (a, b) => new Date(b.lastReadAt).getTime() - new Date(a.lastReadAt).getTime()
+  const getEntry = useCallback(
+    (bookId: string) => entries.find(e => e.bookId === bookId),
+    [entries]
   );
-  const completedBooks = entries.filter(e => e.progress >= 100).sort(
-    (a, b) => new Date(b.completedAt ?? b.lastReadAt).getTime() - new Date(a.completedAt ?? a.lastReadAt).getTime()
+
+  const isReading = useCallback(
+    (bookId: string) => entries.some(e => e.bookId === bookId && !e.completed && e.progress < 100),
+    [entries]
+  );
+
+  const isCompleted = useCallback(
+    (bookId: string) => entries.some(e => e.bookId === bookId && (e.completed || e.progress >= 100)),
+    [entries]
   );
 
   return (
     <ReadingHistoryContext.Provider value={{
-      history, startReading, updateProgress, markCompleted,
-      getEntry, isReading, isCompleted, inProgressBooks, completedBooks,
+      historyEntries: entries,
+      inProgressBooks,
+      completedBooks,
+      loading,
+      startReading,
+      updateProgress,
+      markCompleted,
+      getEntry,
+      isReading,
+      isCompleted,
+      reload: load,
     }}>
       {children}
     </ReadingHistoryContext.Provider>

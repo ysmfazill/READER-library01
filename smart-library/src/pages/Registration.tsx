@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import AuthNavbar from '../components/AuthNavbar';
 import { AuthInput } from '../components/AuthInput';
 import { AuthButton } from '../components/AuthButton';
+import { useAuth } from '../context/AuthContext';
 
 type Strength = 'none' | 'weak' | 'medium' | 'strong';
 
@@ -27,7 +28,9 @@ const METER_COLORS: Record<Strength, { bars: number; color: string; label: strin
 
 const Registration: React.FC = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [form, setForm] = useState({
@@ -37,13 +40,27 @@ const Registration: React.FC = () => {
   const strength = calcStrength(form.password);
   const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!passwordsMatch) {
+      setErrorMsg('Passwords do not match');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setErrorMsg(null);
+    try {
+      await register({
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+      });
       navigate('/welcome');
-    }, 1500);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Registration failed. Email may already be in use.';
+      setErrorMsg(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputClass =
@@ -57,7 +74,6 @@ const Registration: React.FC = () => {
         {/* ── LEFT PANEL ── */}
         <section className="hidden lg:flex lg:w-[45%] brand-gradient relative flex-col justify-center px-16 overflow-hidden">
           <div className="absolute inset-0 z-0 opacity-20">
-            {/* Decorative mesh background */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
           </div>
           <div className="relative z-10 text-white space-y-6">
@@ -65,24 +81,8 @@ const Registration: React.FC = () => {
               Start Your<br />Reading Journey
             </h1>
             <p className="text-[18px] text-white/80 max-w-md leading-relaxed">
-              Create your account and let AI personalize your reading experience from day one. Precision in knowledge, tailored to your intellect.
+              Create your account and let our engine personalize your reading experience from day one. Precision in knowledge, tailored to your intellect.
             </p>
-            <div className="flex items-center gap-4 pt-8">
-              <div className="flex -space-x-4">
-                {[
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuB-jdV95qGoWP2O2nX7aQiAjlZ1NIT-ydH1NMu_Zqygbxnb00YymVErxms0RD0JUs90aOhPTk_k-zyLaOIXMUo8Y_EJIyKr0ibvih0DRJu9L8lmmZfidJawDt7OddZ4hT3riUH3eJCi0qkTJ3KdwD_na5SZjd-1tpZQhVLxdJB_qswimeMh00Jtt61XduZAm_CDp2hgJ1XhbwfxA_Irj5Z4ZXOT2HDXV2MuyUjRVeS7mjvnHf0Ukcc',
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuAbONgxHnnjsv_Ab3_YOw0v5gV-alQ2BPQmDEc6BVpxdO7Yv3waa7BIXbR3V1uly0h1U6w0z3ujvJJWSZWDV5WQeZQArxmlwL0KA1JXsLJznc8ZTW4rK_yWLRaBSvlGTw2SgOjRBIkDTyWGDw5_kWMOIVu1D4-6HAC3ApXa3pSgXGxKC_CGg5xeGu-ig9Vs0oRlA9N3wcZMGnQSHqoFjEMQSgZy6IeHN0cc96mMdh2QS3IhjGj-kss',
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCLzpv5FcSp9dXymMN_5UR-SGnX4TA2tQi0PtN9ayP5rLgefWNl6Y02e7EbKsmc9rSgW2jKZz6mM8Q_Idk7Wwz4Ekdw6vDx7qkVAP67As_q25-Wb8n8CbY8ZYY_MlUCZWsaX7wTizwdq5iHviFyUW3mL-LiraD5SNRqvFOzZe9nwYGiIvwZFoVXXaB-uSq3FVJxT5w3G8XqYBZvLH1UDrQ6Qh4Xvm4SDuFeZFbEhf9Al5Uq2UIAl1E',
-                ].map((src, i) => (
-                  <div
-                    key={i}
-                    className="w-12 h-12 rounded-full border-2 border-white/20 bg-cover bg-center"
-                    style={{ backgroundImage: `url('${src}')` }}
-                  />
-                ))}
-              </div>
-              <span className="text-sm font-medium text-white/90">Joined by 10k+ researchers</span>
-            </div>
           </div>
         </section>
 
@@ -91,12 +91,18 @@ const Registration: React.FC = () => {
           <div className="w-full max-w-xl fade-in-card">
             <div className="glass-card rounded-3xl p-10 shadow-sm border border-white/50">
               {/* Header */}
-              <div className="mb-10 text-center">
+              <div className="mb-8 text-center">
                 <h2 className="text-[32px] font-semibold leading-[1.2] tracking-[-0.01em] text-on-surface mb-2">
                   Create Your Account 🚀
                 </h2>
                 <p className="text-on-surface-variant text-base">Join the next generation of academic discovery.</p>
               </div>
+
+              {errorMsg && (
+                <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium text-center">
+                  {errorMsg}
+                </div>
+              )}
 
               <form className="space-y-6" onSubmit={handleSubmit}>
                 {/* Full Name */}
@@ -113,7 +119,7 @@ const Registration: React.FC = () => {
                 {/* Email + Username grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <AuthInput
-                    id="reg-email" type="email" required placeholder="name@aethelgard.ai"
+                    id="reg-email" type="email" required placeholder="name@example.com"
                     label="Email Address" icon="mail"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -122,7 +128,7 @@ const Registration: React.FC = () => {
                     className={inputClass}
                   />
                   <AuthInput
-                    id="username" type="text" required placeholder="johndoe_res"
+                    id="username" type="text" required placeholder="johndoe"
                     label="Username" icon="alternate_email"
                     value={form.username}
                     onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
@@ -203,8 +209,7 @@ const Registration: React.FC = () => {
                   <label className="text-xs font-semibold text-on-surface-variant leading-tight" htmlFor="terms">
                     I agree to the{' '}
                     <a href="#" className="text-primary hover:underline">Terms &amp; Conditions</a> and{' '}
-                    <a href="#" className="text-primary hover:underline">Privacy Policy</a>.{' '}
-                    I understand my data is processed with academic integrity.
+                    <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
                   </label>
                 </div>
 
@@ -214,7 +219,7 @@ const Registration: React.FC = () => {
                   loading={loading}
                   loadingText="Processing..."
                   icon="arrow_forward"
-                  className="ripple w-full py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-semibold text-2xl shadow-[0_12px_32px_-4px_rgba(109,40,217,0.12)] hover:shadow-[0_16px_40px_-4px_rgba(109,40,217,0.2)] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  className="ripple w-full py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-semibold text-2xl shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer"
                 >
                   Create Account
                 </AuthButton>
@@ -228,18 +233,6 @@ const Registration: React.FC = () => {
           </div>
         </section>
       </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 z-50 py-4 bg-surface/50 backdrop-blur-sm border-t border-outline-variant/10">
-        <div className="max-w-[1440px] mx-auto px-10 flex flex-col md:flex-row justify-between items-center text-on-surface-variant text-xs font-semibold">
-          <span>© 2026 Aethelgard AI. Version 1.0. Precision in knowledge.</span>
-          <div className="flex gap-6 mt-2 md:mt-0">
-            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-primary transition-colors">Terms &amp; Conditions</a>
-            <a href="#" className="hover:text-primary transition-colors">API Documentation</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

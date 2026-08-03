@@ -1,70 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
-import { RECOMMENDED_BOOKS, CONTINUE_READING_BOOKS } from '../utils/placeholderData';
-import type { Book } from '../types';
+import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
+import { computeStreak } from '../utils/mappers';
+import type { HistoryEntry } from '../types';
 
 type Tab = 'in_progress' | 'completed' | 'analytics';
 
-// All books combined for lookup
-const ALL_BOOKS: Book[] = [...RECOMMENDED_BOOKS, ...CONTINUE_READING_BOOKS];
+// ── Time ago helper ────────────────────────────────────────────
+const timeAgo = (iso: string): string => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  if (hours < 168) return `${Math.floor(hours / 24)}d ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
-const getBook = (id: string): Book | undefined => ALL_BOOKS.find(b => b.id === id);
-
-// ── Dummy weekly reading data for bar chart ──
-const WEEKLY_DATA = [
-  { day: 'Mon', minutes: 45 },
-  { day: 'Tue', minutes: 120 },
-  { day: 'Wed', minutes: 30 },
-  { day: 'Thu', minutes: 90 },
-  { day: 'Fri', minutes: 75 },
-  { day: 'Sat', minutes: 180 },
-  { day: 'Sun', minutes: 60 },
-];
-
-const MONTHLY_DATA = [
-  { month: 'Feb', books: 2 },
-  { month: 'Mar', books: 3 },
-  { month: 'Apr', books: 1 },
-  { month: 'May', books: 4 },
-  { month: 'Jun', books: 3 },
-  { month: 'Jul', books: 2 },
-];
-
-const CATEGORY_DATA = [
-  { label: 'Artificial Intelligence', value: 35, color: '#5300b7' },
-  { label: 'Science',                 value: 25, color: '#2170e4' },
-  { label: 'Business',               value: 20, color: '#0b34a4' },
-  { label: 'Philosophy',             value: 12, color: '#6d28d9' },
-  { label: 'Other',                  value: 8,  color: '#ccc3d7' },
-];
-
-// ── Sub-components ────────────────────────────────────────────
-
-const ProgressCard: React.FC<{ bookId: string; progress: number; lastReadAt: string }> = ({ bookId, progress, lastReadAt }) => {
+// ── Progress Card ──────────────────────────────────────────────
+const ProgressCard: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
   const navigate = useNavigate();
-  const { updateProgress } = useReadingHistory();
-  const book = getBook(bookId);
-  if (!book) return null;
+  const { updateProgress, markCompleted } = useReadingHistory();
+  const { book, progress, bookId, lastReadAt } = entry;
 
-  const timeAgo = (iso: string) => {
-    const diff = Date.now() - new Date(iso).getTime();
-    const hours = Math.floor(diff / 3_600_000);
-    if (hours < 1) return 'just now';
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
+  const coverFallback = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600';
 
   return (
-    <div className="glass-card rounded-2xl p-5 flex gap-5 items-start book-card-hover transition-all duration-300 cursor-pointer group"
-      onClick={() => navigate(`/book/${bookId}`)}>
+    <div
+      className="glass-card rounded-2xl p-5 flex gap-5 items-start book-card-hover transition-all duration-300 cursor-pointer group"
+      onClick={() => navigate(`/book/${bookId}`)}
+    >
       <div className="relative shrink-0">
         <img
-          src={book.cover}
+          src={book.cover || coverFallback}
           alt={book.title}
           className="w-20 h-28 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-shadow"
+          onError={(e) => { (e.target as HTMLImageElement).src = coverFallback; }}
         />
         <div className="absolute -bottom-2 -right-2 w-8 h-8 accent-gradient rounded-full flex items-center justify-center text-white shadow-md">
           <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1", fontSize: '16px' }}>
@@ -82,42 +56,38 @@ const ProgressCard: React.FC<{ bookId: string; progress: number; lastReadAt: str
           </div>
           <div className="w-full bg-surface-container-highest rounded-full h-2">
             <div
-              className="h-2 rounded-full accent-gradient transition-all duration-700"
+              className="h-2 rounded-full accent-gradient transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
+        <input
+          type="range"
+          min={0} max={100}
+          value={progress}
+          onClick={e => e.stopPropagation()}
+          onChange={e => { e.stopPropagation(); updateProgress(bookId, parseInt(e.target.value)); }}
+          className="w-full accent-slider cursor-pointer mb-2"
+        />
         <div className="flex items-center justify-between">
-          <span className="text-label-sm text-on-surface-variant">Last read {timeAgo(lastReadAt)}</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={progress}
-            onClick={e => e.stopPropagation()}
-            onChange={e => {
-              e.stopPropagation();
-              updateProgress(bookId, parseInt(e.target.value));
-            }}
-            className="w-24 cursor-pointer accent-slider"
-          />
+          <span className="text-label-sm text-on-surface-variant/60">Last read: {timeAgo(lastReadAt)}</span>
+          <button
+            onClick={e => { e.stopPropagation(); markCompleted(bookId); }}
+            className="text-label-sm text-primary font-semibold hover:underline"
+          >
+            Mark Done
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const CompletedCard: React.FC<{ bookId: string; completedAt?: string; totalMinutesRead: number }> = ({ bookId, completedAt, totalMinutesRead }) => {
+// ── Completed Card ─────────────────────────────────────────────
+const CompletedCard: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
   const navigate = useNavigate();
-  const book = getBook(bookId);
-  if (!book) return null;
-
-  const formatDate = (iso?: string) => iso
-    ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : 'Unknown';
-
-  const hrs = Math.floor(totalMinutesRead / 60);
-  const mins = totalMinutesRead % 60;
+  const { book, bookId, lastReadAt } = entry;
+  const coverFallback = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600';
 
   return (
     <div
@@ -126,11 +96,12 @@ const CompletedCard: React.FC<{ bookId: string; completedAt?: string; totalMinut
     >
       <div className="relative shrink-0">
         <img
-          src={book.cover}
+          src={book.cover || coverFallback}
           alt={book.title}
           className="w-20 h-28 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-shadow"
+          onError={(e) => { (e.target as HTMLImageElement).src = coverFallback; }}
         />
-        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-md">
+        <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white shadow-md">
           <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1", fontSize: '16px' }}>
             check
           </span>
@@ -139,206 +110,164 @@ const CompletedCard: React.FC<{ bookId: string; completedAt?: string; totalMinut
       <div className="flex-1 min-w-0">
         <h3 className="font-headline-md text-body-lg font-bold mb-0.5 line-clamp-1">{book.title}</h3>
         <p className="text-label-md text-on-surface-variant mb-3">{book.author}</p>
-        <div className="flex flex-wrap gap-3 text-label-sm">
-          <span className="flex items-center gap-1 text-on-surface-variant">
-            <span className="material-symbols-outlined text-emerald-500" style={{ fontSize: '16px' }}>event</span>
-            Finished {formatDate(completedAt)}
-          </span>
-          <span className="flex items-center gap-1 text-on-surface-variant">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: '16px' }}>schedule</span>
-            {hrs > 0 ? `${hrs}h ` : ''}{mins}m read
-          </span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[11px] font-bold">Completed</span>
+          <span className="text-label-sm text-on-surface-variant">{book.category}</span>
         </div>
-        <div className="mt-3 flex items-center gap-1">
-          {[1,2,3,4,5].map(s => (
-            <span key={s} className="material-symbols-outlined text-amber-400" style={{ fontVariationSettings: s <= Math.round(book.rating) ? "'FILL' 1" : "'FILL' 0", fontSize: '16px' }}>star</span>
-          ))}
-          <span className="text-label-sm text-on-surface-variant ml-1">({book.rating.toFixed(1)})</span>
-        </div>
+        <p className="text-label-sm text-on-surface-variant/60">Finished: {timeAgo(lastReadAt)}</p>
       </div>
     </div>
   );
 };
 
-// Pure-CSS SVG bar chart
-const BarChart: React.FC<{ data: typeof WEEKLY_DATA }> = ({ data }) => {
-  const max = Math.max(...data.map(d => d.minutes));
-  return (
-    <div className="flex items-end gap-2 h-32 w-full">
-      {data.map(({ day, minutes }) => {
-        const pct = (minutes / max) * 100;
-        return (
-          <div key={day} className="flex-1 flex flex-col items-center gap-1 group">
-            <div className="relative w-full flex flex-col items-center">
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-label-sm text-primary font-bold absolute -top-6 whitespace-nowrap">
-                {minutes}m
-              </span>
-              <div
-                className="w-full rounded-t-lg accent-gradient opacity-70 group-hover:opacity-100 transition-all duration-300"
-                style={{ height: `${pct}%`, minHeight: '4px' }}
-              />
-            </div>
-            <span className="text-label-sm text-on-surface-variant">{day}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Horizontal bar chart for monthly books read
-const HBarChart: React.FC<{ data: typeof MONTHLY_DATA }> = ({ data }) => {
-  const max = Math.max(...data.map(d => d.books));
-  return (
-    <div className="space-y-3">
-      {data.map(({ month, books }) => (
-        <div key={month} className="flex items-center gap-3">
-          <span className="text-label-sm text-on-surface-variant w-8">{month}</span>
-          <div className="flex-1 bg-surface-container-highest rounded-full h-3 overflow-hidden">
-            <div
-              className="h-3 rounded-full accent-gradient transition-all duration-700"
-              style={{ width: `${(books / max) * 100}%` }}
-            />
-          </div>
-          <span className="text-label-sm font-bold text-primary w-4 text-right">{books}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Donut chart (pure CSS/SVG)
-const DonutChart: React.FC<{ data: typeof CATEGORY_DATA }> = ({ data }) => {
-  const total = data.reduce((s, d) => s + d.value, 0);
-  let cumulative = 0;
-  const r = 60, cx = 70, cy = 70;
-  const circumference = 2 * Math.PI * r;
-
-  return (
-    <div className="flex items-center gap-6">
-      <svg viewBox="0 0 140 140" className="w-36 h-36 shrink-0">
-        {data.map(({ label, value, color }) => {
-          const pct = value / total;
-          const dasharray = `${pct * circumference} ${circumference}`;
-          const rotation = (cumulative / total) * 360 - 90;
-          cumulative += value;
-          return (
-            <circle
-              key={label}
-              cx={cx} cy={cy} r={r}
-              fill="none"
-              stroke={color}
-              strokeWidth="20"
-              strokeDasharray={dasharray}
-              strokeDashoffset="0"
-              transform={`rotate(${rotation} ${cx} ${cy})`}
-              className="transition-all duration-700"
-            />
-          );
-        })}
-        <text x={cx} y={cy - 6} textAnchor="middle" className="text-xs" fill="#191c1e" fontWeight="700" fontSize="18">
-          {total}%
-        </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fill="#7b7486" fontSize="9">
-          genres
-        </text>
-      </svg>
-      <div className="space-y-2 flex-1">
-        {data.map(({ label, value, color }) => (
-          <div key={label} className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <span className="text-label-sm text-on-surface-variant flex-1 truncate">{label}</span>
-            <span className="text-label-sm font-bold" style={{ color }}>{value}%</span>
-          </div>
-        ))}
+// ── Simple bar chart using divs ────────────────────────────────
+const BarChart: React.FC<{ data: { label: string; value: number; color?: string }[]; maxValue: number }> = ({ data, maxValue }) => (
+  <div className="flex items-end gap-2 h-32">
+    {data.map((item, i) => (
+      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+        <div
+          className="w-full rounded-t-md transition-all duration-700"
+          style={{
+            height: `${maxValue > 0 ? (item.value / maxValue) * 100 : 0}%`,
+            minHeight: item.value > 0 ? '4px' : '0',
+            background: item.color || 'var(--color-primary)',
+          }}
+        />
+        <span className="text-[10px] text-on-surface-variant">{item.label}</span>
       </div>
-    </div>
-  );
-};
+    ))}
+  </div>
+);
 
-// ── Main Page ────────────────────────────────────────────────
-
+// ── Main Component ─────────────────────────────────────────────
 const ReadingHistory: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('in_progress');
-  const { inProgressBooks, completedBooks } = useReadingHistory();
+  const [search, setSearch] = useState('');
+  const { user } = useAuth();
+  const { historyEntries, inProgressBooks, completedBooks, loading } = useReadingHistory();
+  const { count: favCount } = useFavorites();
 
-  const totalBooksRead = completedBooks.length;
-  const totalMinutes = [...inProgressBooks, ...completedBooks].reduce((s, e) => s + e.totalMinutesRead, 0);
-  const totalHours = Math.floor(totalMinutes / 60);
-  const avgRating = completedBooks.length > 0
-    ? (completedBooks.map(e => getBook(e.bookId)?.rating ?? 0).reduce((s, r) => s + r, 0) / completedBooks.length).toFixed(1)
-    : '—';
+  // ── Stats ────────────────────────────────────────────────────
+  const streak = computeStreak(historyEntries);
+  const totalBooks = historyEntries.length;
+  const completedCount = completedBooks.length;
+  const avgProgress = inProgressBooks.length > 0
+    ? Math.round(inProgressBooks.reduce((s, e) => s + e.progress, 0) / inProgressBooks.length)
+    : 0;
 
-  const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
-    { id: 'in_progress', label: 'Continue Reading', icon: 'menu_book',    count: inProgressBooks.length },
-    { id: 'completed',   label: 'Completed',        icon: 'check_circle', count: completedBooks.length },
-    { id: 'analytics',   label: 'Analytics',        icon: 'insights' },
+  // ── Filter by search ─────────────────────────────────────────
+  const filteredProgress = inProgressBooks.filter(e =>
+    !search || e.book.title.toLowerCase().includes(search.toLowerCase()) || e.book.author.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredCompleted = completedBooks.filter(e =>
+    !search || e.book.title.toLowerCase().includes(search.toLowerCase()) || e.book.author.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // ── Analytics: compute from real history ─────────────────────
+  const weeklyData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts: Record<string, number> = {};
+    days.forEach(d => { counts[d] = 0; });
+    historyEntries.forEach(e => {
+      const day = days[new Date(e.lastReadAt).getDay()];
+      counts[day]++;
+    });
+    return days.map(d => ({ label: d, value: counts[d] }));
+  }, [historyEntries]);
+
+  const monthlyData = useMemo(() => {
+    const months: Record<string, number> = {};
+    completedBooks.forEach(e => {
+      const key = new Date(e.lastReadAt).toLocaleDateString('en-US', { month: 'short' });
+      months[key] = (months[key] || 0) + 1;
+    });
+    return Object.entries(months).slice(-6).map(([month, books]) => ({ label: month, value: books }));
+  }, [completedBooks]);
+
+  const categoryData = useMemo(() => {
+    const cats: Record<string, number> = {};
+    historyEntries.forEach(e => {
+      const cat = e.book.category || 'Other';
+      cats[cat] = (cats[cat] || 0) + 1;
+    });
+    const total = Object.values(cats).reduce((s, v) => s + v, 0) || 1;
+    const COLORS = ['#5300b7', '#2170e4', '#0b34a4', '#6d28d9', '#ccc3d7'];
+    return Object.entries(cats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([label, value], i) => ({
+        label,
+        value: Math.round((value / total) * 100),
+        color: COLORS[i],
+      }));
+  }, [historyEntries]);
+
+  const weekMax = Math.max(...weeklyData.map(d => d.value), 1);
+  const monthMax = Math.max(...monthlyData.map(d => d.value), 1);
+
+  const tabs: { id: Tab; label: string; icon: string; count?: number }[] = [
+    { id: 'in_progress', label: 'In Progress',  icon: 'play_circle',  count: inProgressBooks.length },
+    { id: 'completed',   label: 'Completed',    icon: 'check_circle', count: completedBooks.length },
+    { id: 'analytics',   label: 'Analytics',    icon: 'analytics' },
   ];
 
   return (
     <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 via-transparent to-primary/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
       </div>
-
       <Navbar />
       <Sidebar />
-
       <main className="md:ml-sidebar-width pt-28 px-container-padding pb-section-gap max-w-[1440px] mx-auto min-h-screen">
 
         {/* ── Header ── */}
-        <section className="mb-10">
-          <h1 className="font-headline-lg text-headline-lg mb-1 flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              history
-            </span>
-            Reading History
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant">
-            Track your reading journey, manage progress, and explore your reading analytics.
-          </p>
+        <section className="mb-10 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-container shrink-0">
+            <img src={user?.avatar?.includes('/') ? user.avatar : `/avatars/${user?.avatar || 'avatar1.png'}`} alt="Avatar" className="w-full h-full object-cover" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
+          </div>
+          <div>
+            <h1 className="font-headline-lg text-headline-lg mb-1 flex items-center gap-3 text-[28px] font-bold text-primary">
+              <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>history</span>
+              Reading History
+            </h1>
+            <p className="text-on-surface-variant">Your complete reading journey and progress tracker.</p>
+          </div>
         </section>
 
-        {/* ── KPI Cards ── */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-gutter mb-10">
+        {/* ── KPIs ── */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
-            { icon: 'auto_stories', label: 'Books In Progress', value: inProgressBooks.length, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: 'check_circle', label: 'Books Completed',   value: totalBooksRead,         color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { icon: 'schedule',     label: 'Total Hours Read',  value: `${totalHours}h`,        color: 'text-secondary', bg: 'bg-secondary/10' },
-            { icon: 'star',         label: 'Avg Book Rating',   value: avgRating,               color: 'text-amber-500', bg: 'bg-amber-50' },
-          ].map(({ icon, label, value, color, bg }) => (
-            <div key={label} className="glass-card rounded-2xl p-6 flex flex-col gap-3">
-              <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center ${color}`}>
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+            { label: 'Total Books',      value: totalBooks.toString(),              icon: 'auto_stories' },
+            { label: 'Completed',        value: completedCount.toString(),           icon: 'check_circle' },
+            { label: 'Reading Streak',   value: streak > 0 ? `${streak} days` : '—', icon: 'local_fire_department' },
+            { label: 'Avg. Progress',    value: inProgressBooks.length > 0 ? `${avgProgress}%` : '—', icon: 'trending_up' },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className="glass-card p-5 rounded-2xl">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-primary text-xl">{icon}</span>
+                <p className="text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">{label}</p>
               </div>
-              <div>
-                <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                <p className="text-label-sm text-on-surface-variant">{label}</p>
-              </div>
+              <p className="text-2xl font-bold text-primary">{value}</p>
             </div>
           ))}
         </section>
 
         {/* ── Tabs ── */}
         <div className="flex gap-2 mb-8 border-b border-outline-variant/30">
-          {TABS.map(tab => (
+          {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 font-semibold text-label-md transition-all border-b-2 -mb-px ${
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-label-md border-b-2 transition-all ${
                 activeTab === tab.id
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                  : 'border-transparent text-on-surface-variant hover:text-primary'
               }`}
             >
-              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1", fontSize: '18px' }}>
-                {tab.icon}
-              </span>
+              <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
               {tab.label}
               {tab.count !== undefined && (
-                <span className={`text-label-sm px-2 py-0.5 rounded-full font-bold ${
-                  activeTab === tab.id ? 'bg-primary/10 text-primary' : 'bg-surface-container text-on-surface-variant'
-                }`}>
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-black">
                   {tab.count}
                 </span>
               )}
@@ -346,161 +275,136 @@ const ReadingHistory: React.FC = () => {
           ))}
         </div>
 
-        {/* ── Tab Content ── */}
-
-        {/* Continue Reading */}
-        {activeTab === 'in_progress' && (
-          inProgressBooks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-28 text-center">
-              <div className="w-28 h-28 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-6xl text-primary/20" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  menu_book
-                </span>
-              </div>
-              <h3 className="font-headline-md text-headline-md mb-2">Nothing in progress</h3>
-              <p className="text-on-surface-variant max-w-sm mb-8">
-                Open any book and tap "Start Reading" to begin tracking your progress here.
-              </p>
-              <a href="/search" className="inline-flex items-center gap-2 px-8 py-3 rounded-xl ai-gradient-bg text-white font-bold shadow-lg hover:scale-[1.02] active:scale-95 transition-all">
-                <span className="material-symbols-outlined">search</span>
-                Browse Books
-              </a>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
-              {inProgressBooks.map(entry => (
-                <ProgressCard
-                  key={entry.bookId}
-                  bookId={entry.bookId}
-                  progress={entry.progress}
-                  lastReadAt={entry.lastReadAt}
-                />
-              ))}
-            </div>
-          )
+        {/* ── Search bar (for in_progress / completed) ── */}
+        {activeTab !== 'analytics' && (
+          <div className="relative mb-6 max-w-md">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search your books…"
+              className="w-full pl-12 pr-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-primary/20 outline-none text-base"
+            />
+          </div>
         )}
 
-        {/* Completed */}
-        {activeTab === 'completed' && (
-          completedBooks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-28 text-center">
-              <div className="w-28 h-28 rounded-full bg-emerald-50 flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-6xl text-emerald-200" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  check_circle
-                </span>
-              </div>
-              <h3 className="font-headline-md text-headline-md mb-2">No completed books yet</h3>
-              <p className="text-on-surface-variant max-w-sm mb-8">
-                Mark a book as completed from its details page or slide the progress to 100%.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
-              {completedBooks.map(entry => (
-                <CompletedCard
-                  key={entry.bookId}
-                  bookId={entry.bookId}
-                  completedAt={entry.completedAt}
-                  totalMinutesRead={entry.totalMinutesRead}
-                />
-              ))}
-            </div>
-          )
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
         )}
 
-        {/* Analytics */}
-        {activeTab === 'analytics' && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+        {/* ── In Progress tab ── */}
+        {!loading && activeTab === 'in_progress' && (
+          <>
+            {filteredProgress.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <span className="material-symbols-outlined text-6xl text-primary/30 mb-4">menu_book</span>
+                <h3 className="font-headline-md mb-2">No Books In Progress</h3>
+                <p className="text-on-surface-variant mb-6">Find a book and start reading to track your progress here.</p>
+                <a href="/search" className="px-6 py-3 rounded-xl ai-gradient-bg text-white font-semibold">
+                  Browse Books
+                </a>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredProgress.map(entry => <ProgressCard key={entry.id} entry={entry} />)}
+              </div>
+            )}
+          </>
+        )}
 
-            {/* Weekly reading time bar chart */}
-            <div className="xl:col-span-2 glass-card rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="font-headline-md text-body-lg font-bold">Daily Reading Time</h3>
-                  <p className="text-label-md text-on-surface-variant">Minutes read per day this week</p>
-                </div>
-                <div className="px-3 py-1.5 bg-primary/10 rounded-full text-primary text-label-sm font-bold">
-                  This Week
-                </div>
+        {/* ── Completed tab ── */}
+        {!loading && activeTab === 'completed' && (
+          <>
+            {filteredCompleted.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <span className="material-symbols-outlined text-6xl text-primary/30 mb-4">check_circle</span>
+                <h3 className="font-headline-md mb-2">No Completed Books Yet</h3>
+                <p className="text-on-surface-variant mb-6">Finish a book to add it to your completed list.</p>
               </div>
-              <BarChart data={WEEKLY_DATA} />
-              <div className="mt-4 flex items-center justify-between text-label-sm text-on-surface-variant border-t border-outline-variant/20 pt-4">
-                <span>Total: <span className="font-bold text-primary">600 min</span></span>
-                <span>Daily avg: <span className="font-bold text-primary">85 min</span></span>
-                <span>Best day: <span className="font-bold text-primary">Sat · 180 min</span></span>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredCompleted.map(entry => <CompletedCard key={entry.id} entry={entry} />)}
               </div>
+            )}
+          </>
+        )}
+
+        {/* ── Analytics tab ── */}
+        {!loading && activeTab === 'analytics' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Weekly activity */}
+            <div className="glass-card p-6 rounded-2xl">
+              <h4 className="font-bold mb-1">Weekly Activity</h4>
+              <p className="text-label-sm text-on-surface-variant mb-6">Books read per day this week</p>
+              {historyEntries.length === 0 ? (
+                <p className="text-center text-on-surface-variant/50 py-8">No data yet</p>
+              ) : (
+                <BarChart data={weeklyData} maxValue={weekMax} />
+              )}
             </div>
 
-            {/* Genre breakdown donut */}
-            <div className="glass-card rounded-2xl p-6">
-              <h3 className="font-headline-md text-body-lg font-bold mb-1">Genre Breakdown</h3>
-              <p className="text-label-md text-on-surface-variant mb-6">Your reading interests</p>
-              <DonutChart data={CATEGORY_DATA} />
+            {/* Monthly books */}
+            <div className="glass-card p-6 rounded-2xl">
+              <h4 className="font-bold mb-1">Monthly Books Completed</h4>
+              <p className="text-label-sm text-on-surface-variant mb-6">Books finished per month</p>
+              {monthlyData.length === 0 ? (
+                <p className="text-center text-on-surface-variant/50 py-8">Complete books to see monthly stats</p>
+              ) : (
+                <BarChart data={monthlyData} maxValue={monthMax} />
+              )}
             </div>
 
-            {/* Monthly books read */}
-            <div className="xl:col-span-2 glass-card rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="font-headline-md text-body-lg font-bold">Books Completed per Month</h3>
-                  <p className="text-label-md text-on-surface-variant">Your monthly reading cadence</p>
+            {/* Category breakdown */}
+            <div className="glass-card p-6 rounded-2xl">
+              <h4 className="font-bold mb-6">Category Breakdown</h4>
+              {categoryData.length === 0 ? (
+                <p className="text-center text-on-surface-variant/50 py-8">No data yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {categoryData.map(item => (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-label-sm mb-1">
+                        <span className="font-medium">{item.label}</span>
+                        <span className="font-bold" style={{ color: item.color }}>{item.value}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-surface-container-highest rounded-full">
+                        <div
+                          className="h-2 rounded-full transition-all duration-700"
+                          style={{ width: `${item.value}%`, background: item.color }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="px-3 py-1.5 bg-secondary/10 rounded-full text-secondary text-label-sm font-bold">
-                  Last 6 Months
-                </div>
-              </div>
-              <HBarChart data={MONTHLY_DATA} />
+              )}
             </div>
 
-            {/* Reading streak */}
-            <div className="glass-card rounded-2xl p-6 flex flex-col">
-              <h3 className="font-headline-md text-body-lg font-bold mb-1">Reading Streak</h3>
-              <p className="text-label-md text-on-surface-variant mb-6">Consistency score</p>
-              <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                <div className="relative w-32 h-32">
-                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="#e6e8ea" strokeWidth="12" />
-                    <circle
-                      cx="60" cy="60" r="50"
-                      fill="none"
-                      stroke="url(#grad)"
-                      strokeWidth="12"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(14 / 21) * 314} 314`}
-                    />
-                    <defs>
-                      <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#6d28d9" />
-                        <stop offset="100%" stopColor="#2170e4" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-primary">14</span>
-                    <span className="text-label-sm text-on-surface-variant">days</span>
+            {/* Summary stats */}
+            <div className="glass-card p-6 rounded-2xl">
+              <h4 className="font-bold mb-6">Reading Summary</h4>
+              <div className="space-y-4">
+                {[
+                  { label: 'Total Books Tracked', value: totalBooks.toString() },
+                  { label: 'Books Completed',      value: completedCount.toString() },
+                  { label: 'Books In Progress',    value: inProgressBooks.length.toString() },
+                  { label: 'Favorites Saved',      value: favCount.toString() },
+                  { label: 'Current Streak',       value: streak > 0 ? `${streak} days` : 'Start reading!' },
+                  { label: 'Avg. Progress',        value: inProgressBooks.length > 0 ? `${avgProgress}%` : '—' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between py-2 border-b border-outline-variant/20 last:border-0">
+                    <span className="text-on-surface-variant text-sm">{label}</span>
+                    <span className="font-bold text-primary">{value}</span>
                   </div>
-                </div>
-                <p className="text-center text-label-md text-on-surface-variant">
-                  🔥 <span className="font-bold text-on-surface">14-day streak!</span><br />
-                  Best: 21 days
-                </p>
+                ))}
               </div>
             </div>
-
           </div>
         )}
-
       </main>
-
-      <footer className="md:ml-sidebar-width bg-surface border-t border-outline-variant/30 py-8 mt-section-gap relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-center px-container-padding max-w-[1440px] mx-auto gap-4 text-label-sm text-on-surface-variant">
-          <p>© 2024 Aethelgard AI. Precision in knowledge.</p>
-          <div className="flex gap-8">
-            <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
-            <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

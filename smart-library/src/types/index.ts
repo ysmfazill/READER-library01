@@ -1,11 +1,12 @@
+// ── Core Domain Types ─────────────────────────────────────────────────────────
+
 export interface User {
-  id: string;
-  name: string;
+  id: number;
+  fullName: string;
   email: string;
-  username?: string;
+  role: 'USER' | 'ADMIN' | 'ROLE_USER' | 'ROLE_ADMIN';
   avatar?: string;
-  tier?: string;
-  role?: 'USER' | 'ADMIN';
+  createdAt?: string;
 }
 
 export interface Interest {
@@ -15,6 +16,8 @@ export interface Interest {
   desc: string;
 }
 
+// ── Book (frontend canonical type) ────────────────────────────────────────────
+
 export interface Book {
   id: string;
   title: string;
@@ -22,17 +25,84 @@ export interface Book {
   cover: string;
   rating: number;
   category: string;
-  matchPercent?: number;
+  categoryId?: number;
   matchReason?: string;
+  recommendationScore?: number;
+  recommendationReason?: string;
   progress?: number;
   description?: string;
   publicationYear?: number;
   language?: string;
   pages?: number;
-  aiSummary?: string;
+
   keywords?: string[];
   similarBooks?: string[];
+  isbn?: string;
+  availableCopies?: number;
+  totalCopies?: number;
+  createdAt?: string;
 }
+
+// ── Reading History ────────────────────────────────────────────────────────────
+
+export interface HistoryEntry {
+  id: string;
+  bookId: string;
+  book: Book;
+  progress: number;        // 0–100
+  completed: boolean;
+  lastReadAt: string;      // ISO string
+  startedAt?: string;
+}
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+
+export interface FavoriteItem {
+  id: string;
+  book: Book;
+  addedAt: string;         // ISO string
+}
+
+// ── User Profile (full, with stats) ───────────────────────────────────────────
+
+export interface UserProfileData {
+  id: number;
+  fullName: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  createdAt?: string;
+  totalFavorites: number;
+  totalReadingHistory: number;
+  totalReviews: number;
+  interests: Interest[];
+}
+
+// ── Category ─────────────────────────────────────────────────────────────────
+
+export interface CategoryDTO {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+// ── API Response wrapper ──────────────────────────────────────────────────────
+
+export interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
+export interface PageData<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;   // current page
+  size: number;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
 export interface AuthState {
   isAuthenticated: boolean;
