@@ -148,8 +148,10 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setProfileLoading(true);
     try {
       const apiProfile = await userService.getProfile(userId);
-      const extras = loadExtras();
-      setProfile(buildProfile(apiProfile, extras));
+      if (apiProfile) {
+        const extras = loadExtras();
+        setProfile(buildProfile(apiProfile, extras));
+      }
     } catch {
       // Silently fall back to auth user data
     } finally {
