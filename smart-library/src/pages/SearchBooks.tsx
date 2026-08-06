@@ -191,14 +191,14 @@ const SearchBooks: React.FC = () => {
             </section>
 
             {/* Rating and Advanced filters */}
-            <section className="mb-6 sm:mb-8 flex flex-wrap items-center gap-3 sm:gap-4 bg-surface-container-low/50 p-4 rounded-2xl border border-outline-variant/20">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Rating:</span>
+            <section className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 sm:gap-4 bg-surface-container-low/50 p-3.5 sm:p-4 rounded-2xl border border-outline-variant/20 w-full max-w-full overflow-hidden">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                <span className="text-xs font-semibold text-on-surface-variant shrink-0">Rating:</span>
                 {[0, 3, 3.5, 4, 4.5].map(r => (
                   <button
                     key={r}
                     onClick={() => setMinRating(r)}
-                    className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-all min-h-[32px] ${
+                    className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-all min-h-[32px] shrink-0 ${
                       minRating === r ? 'ai-gradient-bg text-white' : 'bg-surface-container text-on-surface-variant hover:text-primary'
                     }`}
                   >
@@ -207,24 +207,22 @@ const SearchBooks: React.FC = () => {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <select 
                   value={selectedLanguage}
                   onChange={e => setSelectedLanguage(e.target.value)}
-                  className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px]"
+                  className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px] flex-1 sm:flex-none max-w-full"
                 >
                   <option value="">All Languages</option>
                   <option value="English">English</option>
                   <option value="Spanish">Spanish</option>
                   <option value="French">French</option>
                 </select>
-              </div>
 
-              <div className="flex items-center gap-2">
                 <select 
                   value={selectedYear || ''}
                   onChange={e => setSelectedYear(e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px]"
+                  className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px] flex-1 sm:flex-none max-w-full"
                 >
                   <option value="">Any Year</option>
                   <option value="2024">2024</option>
@@ -233,20 +231,19 @@ const SearchBooks: React.FC = () => {
                   <option value="2021">2021</option>
                   <option value="2020">2020</option>
                 </select>
-              </div>
 
-              <div className="flex items-center gap-2 sm:ml-auto">
-                <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Sort By:</span>
-                <select 
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px]"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="rating">Highest Rated</option>
-                  <option value="year_desc">Newest First</option>
-                  <option value="year_asc">Oldest First</option>
-                </select>
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
+                  <span className="text-xs font-semibold text-on-surface-variant shrink-0">Sort:</span>
+                  <select 
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value as any)}
+                    className="bg-surface-container text-on-surface-variant border border-outline-variant/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary/50 min-h-[36px]"
+                  >
+                    <option value="relevance">Relevance</option>
+                    <option value="rating">Rating</option>
+                    <option value="title">Title</option>
+                  </select>
+                </div>
               </div>
             </section>
 

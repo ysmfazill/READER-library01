@@ -106,9 +106,9 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 sm:h-20 flex items-center justify-between px-4 sm:px-8 lg:px-10 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20 z-30 sticky top-0 shrink-0 w-full max-w-full">
-        {/* Left: Mobile Hamburger + Brand / Search shortcut */}
-        <div className="flex items-center gap-3 w-full max-w-xl">
+      <header className="h-16 sm:h-20 flex items-center justify-between px-3 sm:px-6 lg:px-10 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20 z-30 sticky top-0 shrink-0 w-full max-w-full overflow-hidden">
+        {/* Left: Mobile Hamburger + Brand Logo */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setIsDrawerOpen(true)}
             className="lg:hidden p-2 text-on-surface-variant hover:bg-primary/10 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
@@ -117,29 +117,31 @@ const Navbar: React.FC = () => {
             <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>
 
-          {/* Mobile brand (small screens) */}
+          {/* Brand Logo & Name */}
           <div
             onClick={() => navigate('/home')}
-            className="flex items-center gap-2 cursor-pointer sm:hidden shrink-0 mr-1"
+            className="flex items-center gap-2 cursor-pointer shrink-0"
           >
-            <img src="/logo.png" alt="Readify Logo" className="h-8 w-auto object-contain" />
+            <img src="/logo.png" alt="Readify Logo" className="h-8 sm:h-10 w-auto object-contain" />
+            <span className="font-bold text-base sm:text-lg text-primary tracking-tight hidden sm:inline">Readify</span>
           </div>
-
-          <button
-            onClick={() => navigate('/search')}
-            className="relative hidden sm:flex flex-1 items-center group min-h-[44px]"
-          >
-            <span className="material-symbols-outlined absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50 group-hover:text-primary transition-colors text-[20px]">
-              search
-            </span>
-            <div className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 bg-surface-container-low border border-outline-variant/20 rounded-xl text-xs sm:text-sm text-on-surface-variant/70 hover:bg-surface-container text-left cursor-pointer transition-all truncate">
-              <span>Search across your digital library…</span>
-            </div>
-          </button>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto sm:ml-2">
+        {/* Center: Search Bar (Desktop / Tablet only) */}
+        <button
+          onClick={() => navigate('/search')}
+          className="relative hidden md:flex flex-1 items-center max-w-md mx-4 min-h-[44px] group"
+        >
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50 group-hover:text-primary transition-colors text-[20px]">
+            search
+          </span>
+          <div className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant/20 rounded-xl text-xs sm:text-sm text-on-surface-variant/70 hover:bg-surface-container text-left cursor-pointer transition-all truncate">
+            Search across your digital library…
+          </div>
+        </button>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <button

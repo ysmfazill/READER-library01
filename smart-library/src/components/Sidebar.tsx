@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, className = '', isDrawer = f
 
   const baseClasses = isDrawer
     ? 'flex flex-col w-full h-full py-6 gap-y-2'
-    : 'hidden lg:flex w-[280px] bg-surface/80 backdrop-blur-xl border-r border-outline-variant/20 flex-col py-6 gap-y-2 shrink-0';
+    : 'hidden lg:flex lg:flex-col w-[280px] bg-surface/80 backdrop-blur-xl border-r border-outline-variant/20 py-6 gap-y-2 shrink-0';
 
   return (
     <aside className={`${baseClasses} ${className}`}>
