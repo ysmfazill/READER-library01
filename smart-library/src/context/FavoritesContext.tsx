@@ -27,7 +27,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Derived values
   const favorites: Book[] = favoriteItems.map(fi => fi.book);
-  const favoriteIds = new Set<string>(favoriteItems.map(fi => fi.book.id));
+  const favoriteIds = new Set<string>(favoriteItems.map(fi => String(fi.book.id)));
   const count = favoriteItems.length;
 
   // Load favorites from API on auth change
@@ -104,7 +104,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [favoriteIds, addFavorite, removeFavorite]);
 
-  const isFavorite = useCallback((bookId: string) => favoriteIds.has(bookId), [favoriteIds]);
+  const isFavorite = useCallback((bookId: string) => favoriteIds.has(String(bookId)), [favoriteIds]);
 
   return (
     <FavoritesContext.Provider value={{

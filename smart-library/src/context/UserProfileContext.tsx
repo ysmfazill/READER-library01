@@ -94,7 +94,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoPlayPreviews: false,
 };
 
-const SETTINGS_KEY = 'aethelgard_settings';
+const SETTINGS_KEY = 'readify_settings';
 
 function loadSettings(): UserSettings {
   try {
@@ -124,7 +124,7 @@ function buildProfile(apiProfile: UserProfileData, extras: { bio?: string; locat
   };
 }
 
-const EXTRAS_KEY = 'aethelgard_profile_extras';
+const EXTRAS_KEY = 'readify_profile_extras';
 function loadExtras() {
   try {
     const raw = localStorage.getItem(EXTRAS_KEY);

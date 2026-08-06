@@ -142,23 +142,27 @@ const BookDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-surface text-on-surface min-h-screen">
-        <Sidebar />
-        <Navbar />
-        <main className="pt-20 md:ml-sidebar-width min-h-screen px-container-padding pb-section-gap">
-          <div className="max-w-[1440px] mx-auto mt-10"><DetailSkeleton /></div>
-        </main>
+      <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
+        <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
+          <Sidebar className="hidden lg:flex" />
+          <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
+            <Navbar />
+            <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 max-w-[1440px] mx-auto w-full">
+              <DetailSkeleton />
+            </main>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !book) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-surface">
-        <span className="material-symbols-outlined text-6xl text-primary/30 mb-4">menu_book</span>
-        <h2 className="text-2xl font-bold text-on-surface mb-2">Book Not Found</h2>
-        <p className="text-on-surface-variant mb-6">This book doesn't exist or was removed.</p>
-        <button onClick={() => navigate('/search')} className="px-6 py-3 rounded-xl ai-gradient-bg text-white font-semibold">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-surface px-4 text-center">
+        <span className="material-symbols-outlined text-5xl sm:text-6xl text-primary/30 mb-4">menu_book</span>
+        <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-2">Book Not Found</h2>
+        <p className="text-xs sm:text-sm text-on-surface-variant mb-6">This book doesn't exist or was removed.</p>
+        <button onClick={() => navigate('/search')} className="px-6 py-3 rounded-xl ai-gradient-bg text-white font-semibold min-h-[48px]">
           Back to Search
         </button>
       </div>
@@ -170,18 +174,19 @@ const BookDetails: React.FC = () => {
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-secondary/5" />
       </div>
-      <Sidebar />
-      <Navbar />
-      <main className="relative z-10 pt-20 md:ml-sidebar-width min-h-screen px-container-padding pb-section-gap">
-        <div className="max-w-[1440px] mx-auto mt-10">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-label-sm text-on-surface-variant/60 mb-8 fade-in">
-            <span className="cursor-pointer hover:text-primary" onClick={() => navigate('/search')}>Search</span>
-            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-            <span>{book.category}</span>
-            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-            <span className="text-primary font-bold truncate max-w-[200px]">{book.title}</span>
-          </nav>
+      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
+        <Sidebar className="hidden lg:flex" />
+        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
+          <Navbar />
+          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 max-w-[1440px] mx-auto w-full">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 text-xs sm:text-sm text-on-surface-variant/60 mb-6 fade-in flex-wrap">
+              <span className="cursor-pointer hover:text-primary" onClick={() => navigate('/search')}>Search</span>
+              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+              <span>{book.category}</span>
+              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+              <span className="text-primary font-bold truncate max-w-[150px] sm:max-w-xs">{book.title}</span>
+            </nav>
 
           <div className="grid grid-cols-12 gap-gutter">
             {/* Left column — cover + actions */}
@@ -193,6 +198,9 @@ const BookDetails: React.FC = () => {
                     className="w-full h-full object-cover"
                     src={book.cover}
                     alt={book.title}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600'; }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -495,10 +503,11 @@ const BookDetails: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default BookDetails;

@@ -120,17 +120,17 @@ export const ReadingHistoryProvider: React.FC<{ children: React.ReactNode }> = (
   }, [updateProgress]);
 
   const getEntry = useCallback(
-    (bookId: string) => entries.find(e => e.bookId === bookId),
+    (bookId: string) => entries.find(e => String(e.bookId) === String(bookId)),
     [entries]
   );
 
   const isReading = useCallback(
-    (bookId: string) => entries.some(e => e.bookId === bookId && !e.completed && e.progress < 100),
+    (bookId: string) => entries.some(e => String(e.bookId) === String(bookId) && !e.completed && e.progress < 100),
     [entries]
   );
 
   const isCompleted = useCallback(
-    (bookId: string) => entries.some(e => e.bookId === bookId && (e.completed || e.progress >= 100)),
+    (bookId: string) => entries.some(e => String(e.bookId) === String(bookId) && (e.completed || e.progress >= 100)),
     [entries]
   );
 
