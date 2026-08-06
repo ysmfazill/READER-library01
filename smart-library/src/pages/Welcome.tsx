@@ -47,7 +47,7 @@ const Welcome: React.FC = () => {
   // Try to load interests from API, fall back to static list
   useEffect(() => {
     let cancelled = false;
-    interestService.getUserInterests(0).then((res: any) => {
+    interestService.getAllInterests().then((res: any) => {
       if (cancelled) return;
       const list = Array.isArray(res) ? res : (res?.content || []);
       if (list.length > 0) {
