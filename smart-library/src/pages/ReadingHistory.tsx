@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
@@ -225,16 +224,7 @@ const ReadingHistory: React.FC = () => {
   ];
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-      </div>
-
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
 
             {/* ── Header ── */}
             <section className="mb-6 sm:mb-8 flex items-center gap-3 sm:gap-4">
@@ -420,10 +410,7 @@ const ReadingHistory: React.FC = () => {
             </div>
           </div>
         )}
-      </main>
-    </div>
-  </div>
-</div>
+    </AppLayout>
   );
 };
 

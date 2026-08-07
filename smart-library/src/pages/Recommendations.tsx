@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
+import AppLayout from '../components/AppLayout';
 import { BookCard } from '../components/BookCard';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -100,12 +99,7 @@ const Recommendations: React.FC = () => {
   }, [loadAll]);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             <section className="mb-6 sm:mb-8">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3 text-primary">
                 <span className="material-symbols-outlined text-2xl sm:text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
@@ -116,7 +110,7 @@ const Recommendations: React.FC = () => {
               </p>
             </section>
 
-            <RecommendationRow title="✨ Personalized Recommendations" books={personalized} loading={loading} />
+            <RecommendationRow title="✨ Top Personalized Picks" books={personalized} loading={loading} />
             <RecommendationRow title="📖 Continue Reading" books={continueReading} loading={loading} />
             <RecommendationRow title="🎯 Based on Your Interests" books={interests} loading={loading} />
             <RecommendationRow title="❤️ Similar to Your Favorites" books={similarToFavs} loading={loading} />
@@ -126,10 +120,7 @@ const Recommendations: React.FC = () => {
             <RecommendationRow title="👀 Recently Viewed" books={recentlyViewed} loading={loading} />
             <RecommendationRow title="🏆 Most Popular" books={popular} loading={loading} />
             <RecommendationRow title="🆕 New Arrivals" books={newest} loading={loading} />
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { BookCard } from '../components/BookCard';
 import { useFavorites } from '../context/FavoritesContext';
-import { useAuth } from '../context/AuthContext';
 import type { Book } from '../types';
 
 type SortOption = 'newest' | 'highest_rated' | 'alphabetical';
 
 const Favorites: React.FC = () => {
   const { favorites, count } = useFavorites();
-  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [search, setSearch] = useState('');
 
@@ -42,62 +39,46 @@ const Favorites: React.FC = () => {
   ];
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      {/* Atmospheric background */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-primary/5" />
-      </div>
+    <AppLayout>
+      {/* ── Header ── */}
+      <section className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2.5 sm:gap-3">
+            <span
+              className="material-symbols-outlined text-red-500 text-3xl sm:text-4xl"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              favorite
+            </span>
+            My Favorites
+          </h1>
+          <p className="text-xs sm:text-sm text-on-surface-variant">
+            {count === 0
+              ? 'Your curated reading list — add books to build your collection.'
+              : `${count} book${count !== 1 ? 's' : ''} saved to your personal library.`}
+          </p>
+        </div>
 
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
-
-            {/* ── Header ── */}
-            <section className="mb-6 sm:mb-8 flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-container shrink-0">
-                <img src={user?.avatar?.includes('/') ? user.avatar : `/avatars/${user?.avatar || 'avatar1.png'}`} alt="Avatar" className="w-full h-full object-cover" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
-              </div>
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-1">
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2.5 sm:gap-3">
-                    <span
-                      className="material-symbols-outlined text-red-500 text-3xl sm:text-4xl"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      favorite
-                    </span>
-                    My Favorites
-                  </h1>
-                  <p className="text-xs sm:text-sm text-on-surface-variant">
-                    {count === 0
-                      ? 'Your curated reading list — add books to build your collection.'
-                      : `${count} book${count !== 1 ? 's' : ''} saved to your personal library.`}
-                  </p>
-                </div>
-
-                {/* Stats pill */}
-                {count > 0 && (
-                  <div className="glass-card px-4 sm:px-6 py-3 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 shrink-0">
-                    <div className="text-center">
-                      <p className="text-lg sm:text-2xl font-bold text-primary">{count}</p>
-                      <p className="text-[10px] sm:text-xs text-on-surface-variant">Saved</p>
-                    </div>
-                    <div className="w-px h-8 sm:h-10 bg-outline-variant/40" />
-                    <div className="text-center">
-                      <p className="text-lg sm:text-2xl font-bold text-primary">
-                        {count > 0
-                          ? (favoriteBooks.reduce((s, b) => s + b.rating, 0) / favoriteBooks.length).toFixed(1)
-                          : '—'}
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-on-surface-variant">Avg Rating</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
+        {/* Stats pill */}
+        {count > 0 && (
+          <div className="glass-card px-4 sm:px-6 py-3 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 shrink-0">
+            <div className="text-center">
+              <p className="text-lg sm:text-2xl font-bold text-primary">{count}</p>
+              <p className="text-[10px] sm:text-xs text-on-surface-variant">Saved</p>
+            </div>
+            <div className="w-px h-8 bg-outline-variant/20" />
+            <div className="text-center">
+              <p className="text-lg sm:text-2xl font-bold text-primary">
+                {count > 0
+                  ? (favoriteBooks.reduce((s, b) => s + b.rating, 0) / favoriteBooks.length).toFixed(1)
+                  : '—'}
+              </p>
+              <p className="text-[10px] sm:text-xs text-on-surface-variant">Avg Rating</p>
+            </div>
+          </div>
+        )}
+      </section>
+      {/* ── Empty State / Content ── */}
 
             {count === 0 ? (
               /* ── Empty State ── */
@@ -188,20 +169,7 @@ const Favorites: React.FC = () => {
                 )}
               </>
             )}
-          </main>
-
-          <footer className="bg-surface border-t border-outline-variant/30 py-6 sm:py-8 mt-auto relative z-10 w-full">
-            <div className="flex flex-col sm:flex-row justify-between items-center px-4 sm:px-8 max-w-[1440px] mx-auto gap-4 text-xs sm:text-sm text-on-surface-variant">
-              <p>© 2026 Readify App. Precision in knowledge.</p>
-              <div className="flex gap-6 sm:gap-8">
-                <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
-                <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
-              </div>
-            </div>
-          </footer>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

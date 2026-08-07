@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { analyticsService, type LeaderboardEntry } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
 
@@ -48,17 +47,7 @@ const Leaderboard: React.FC = () => {
   const podiumData = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-      </div>
-
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             <section className="mb-6 sm:mb-8 text-center animate-fade-in">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 flex items-center justify-center gap-2 sm:gap-3">
                 <span className="material-symbols-outlined text-yellow-500 text-3xl sm:text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>trophy</span>
@@ -168,10 +157,7 @@ const Leaderboard: React.FC = () => {
                 )}
               </>
             )}
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

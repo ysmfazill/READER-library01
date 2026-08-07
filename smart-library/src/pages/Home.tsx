@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
+import AppLayout from '../components/AppLayout';
 import { BookCard } from '../components/BookCard';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -125,11 +124,7 @@ const Home: React.FC = () => {
   ].slice(0, 5);
 
   return (
-    <div className="flex min-h-screen w-full relative z-10 overflow-x-hidden bg-background">
-      <Sidebar className="hidden lg:flex" />
-      <main className="flex-1 flex flex-col min-h-screen relative overflow-x-hidden w-full max-w-full">
-        <Navbar />
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-12 pb-20 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
 
           {/* ── Welcome & KPIs ── */}
           <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
@@ -396,9 +391,7 @@ const Home: React.FC = () => {
             )}
           </section>
 
-        </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 };
 

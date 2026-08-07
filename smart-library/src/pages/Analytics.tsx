@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { useAuth } from '../context/AuthContext';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
 import { analyticsService, type UserStatistics } from '../services/analyticsService';
@@ -65,17 +64,7 @@ const Analytics: React.FC = () => {
   const monthMax = Math.max(...monthlyReadsData.map(d => d.value), 1);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-      </div>
-
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             <section className="mb-6 sm:mb-8 animate-fade-in">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2.5 sm:gap-3 text-primary">
                 <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>monitoring</span>
@@ -173,10 +162,7 @@ const Analytics: React.FC = () => {
                 </div>
               </div>
             )}
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

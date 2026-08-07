@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useAuth } from '../context/AuthContext';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
@@ -151,18 +150,7 @@ const Profile: React.FC = () => {
   ], [completedBooks.length, inProgressBooks.length, stats?.globalRank, streak]);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      {/* Atmospheric bg */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-      </div>
-
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
 
             {/* Save toast */}
             <div className={`fixed top-20 sm:top-24 right-4 sm:right-6 z-50 flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl ai-gradient-bg text-white shadow-lg text-xs sm:text-sm transition-all duration-300 ${saveNotice ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
@@ -340,20 +328,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-      </main>
-
-          <footer className="bg-surface border-t border-outline-variant/30 py-6 sm:py-8 mt-auto relative z-10 w-full">
-            <div className="flex flex-col sm:flex-row justify-between items-center px-4 sm:px-8 max-w-[1440px] mx-auto gap-4 text-xs sm:text-sm text-on-surface-variant">
-              <p>© 2026 Readify App. Precision in knowledge.</p>
-              <div className="flex gap-6 sm:gap-8">
-                <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
-                <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
-              </div>
-            </div>
-          </footer>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

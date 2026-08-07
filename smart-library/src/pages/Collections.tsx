@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { BookCard } from '../components/BookCard';
 import { collectionService, type UserCollectionDTO } from '../services/collectionService';
 
@@ -58,12 +57,7 @@ const Collections: React.FC = () => {
   const activeCollection = collections.find(c => c.id === activeColId);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             <section className="mb-6 sm:mb-8">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2 sm:gap-3 text-primary">
                 <span className="material-symbols-outlined text-2xl sm:text-4xl">collections_bookmark</span>
@@ -163,10 +157,7 @@ const Collections: React.FC = () => {
                 )}
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

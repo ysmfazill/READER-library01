@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { BookCard } from '../components/BookCard';
 import { useDebounce } from '../hooks/useDebounce';
 import { bookService } from '../services/bookService';
@@ -121,16 +120,7 @@ const SearchBooks: React.FC = () => {
   }, [books, selectedLanguage, selectedYear, sortBy]);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-      <div className="fixed inset-0 w-full h-full -z-10 opacity-40 pointer-events-none">
-        <div className="w-full h-full bg-gradient-to-tr from-primary/10 via-transparent to-secondary/10" />
-      </div>
-
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             {/* Page header */}
             <section className="mb-6 sm:mb-8">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
@@ -303,10 +293,7 @@ const SearchBooks: React.FC = () => {
                 )}
               </>
             )}
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 };
 

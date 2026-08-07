@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import AppLayout from '../components/AppLayout';
 import { useReadingHistory } from '../context/ReadingHistoryContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { bookService } from '../services/bookService';
@@ -142,43 +141,29 @@ const BookDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden">
-        <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-          <Sidebar className="hidden lg:flex" />
-          <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-            <Navbar />
-            <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 max-w-[1440px] mx-auto w-full">
-              <DetailSkeleton />
-            </main>
-          </div>
-        </div>
-      </div>
+      <AppLayout>
+        <DetailSkeleton />
+      </AppLayout>
     );
   }
 
   if (error || !book) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-surface px-4 text-center">
-        <span className="material-symbols-outlined text-5xl sm:text-6xl text-primary/30 mb-4">menu_book</span>
-        <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-2">Book Not Found</h2>
-        <p className="text-xs sm:text-sm text-on-surface-variant mb-6">This book doesn't exist or was removed.</p>
-        <button onClick={() => navigate('/search')} className="px-6 py-3 rounded-xl ai-gradient-bg text-white font-semibold min-h-[48px]">
-          Back to Search
-        </button>
-      </div>
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <span className="material-symbols-outlined text-5xl sm:text-6xl text-primary/30 mb-4">menu_book</span>
+          <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-2">Book Not Found</h2>
+          <p className="text-xs sm:text-sm text-on-surface-variant mb-6">This book doesn't exist or was removed.</p>
+          <button onClick={() => navigate('/search')} className="px-6 py-3 rounded-xl ai-gradient-bg text-white font-semibold min-h-[48px]">
+            Back to Search
+          </button>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen relative overflow-x-hidden selection:bg-primary/20">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-secondary/5" />
-      </div>
-      <div className="flex min-h-screen overflow-x-hidden w-full max-w-full">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 max-w-[1440px] mx-auto w-full">
+    <AppLayout>
             {/* Breadcrumb */}
             <nav className="flex items-center gap-1.5 text-xs sm:text-sm text-on-surface-variant/60 mb-6 fade-in flex-wrap">
               <span className="cursor-pointer hover:text-primary" onClick={() => navigate('/search')}>Search</span>
@@ -503,10 +488,7 @@ const BookDetails: React.FC = () => {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
-  </div>
+    </AppLayout>
 );
 };
 
