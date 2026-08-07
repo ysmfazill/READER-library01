@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { useUserProfile } from '../context/UserProfileContext';
+import { useMobileDrawer } from '../context/MobileDrawerContext';
 import { getFirstName } from '../utils/mappers';
 import { notificationService, type NotificationDTO } from '../services/notificationService';
 
@@ -18,9 +19,8 @@ function getInitials(name: string): string {
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { profile } = useUserProfile();
+  const { isDrawerOpen, openDrawer, closeDrawer } = useMobileDrawer();
   const navigate = useNavigate();
-
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const displayName = user?.fullName || profile.name || 'Reader';
   const firstName = getFirstName(displayName);
@@ -110,8 +110,8 @@ const Navbar: React.FC = () => {
         {/* Left: Mobile Hamburger + Brand Logo */}
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="lg:hidden p-2 text-on-surface-variant hover:bg-primary/10 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+            onClick={openDrawer}
+            className="lg:hidden p-2 text-on-surface-variant hover:bg-primary/10 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0 cursor-pointer"
             aria-label="Open mobile navigation drawer"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
@@ -123,14 +123,14 @@ const Navbar: React.FC = () => {
             className="flex items-center gap-2 cursor-pointer shrink-0"
           >
             <img src="/logo.png" alt="Readify Logo" className="h-8 sm:h-10 w-auto object-contain" />
-            <span className="font-bold text-base sm:text-lg text-primary tracking-tight hidden sm:inline">Readify</span>
+            <span className="font-bold text-base sm:text-lg text-primary tracking-tight">Readify</span>
           </div>
         </div>
 
         {/* Center: Search Bar (Desktop / Tablet only) */}
         <button
           onClick={() => navigate('/search')}
-          className="relative hidden md:flex flex-1 items-center max-w-md mx-4 min-h-[44px] group"
+          className="relative hidden md:flex flex-1 items-center max-w-md mx-4 min-h-[44px] group min-w-0"
         >
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50 group-hover:text-primary transition-colors text-[20px]">
             search
@@ -142,6 +142,15 @@ const Navbar: React.FC = () => {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
+          {/* Mobile Search Button */}
+          <button
+            onClick={() => navigate('/search')}
+            className="md:hidden p-2 text-on-surface-variant hover:bg-primary/10 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            aria-label="Search"
+          >
+            <span className="material-symbols-outlined text-[22px]">search</span>
+          </button>
+
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <button
@@ -241,7 +250,7 @@ const Navbar: React.FC = () => {
               onClick={logout}
               aria-label="Logout"
               title="Sign out"
-              className="p-2 text-on-surface-variant hover:bg-error/10 hover:text-error rounded-full transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer"
+              className="p-2 text-on-surface-variant hover:bg-error/10 hover:text-error rounded-full transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer hidden sm:flex"
             >
               <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
@@ -255,13 +264,13 @@ const Navbar: React.FC = () => {
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-fade-in"
-            onClick={() => setIsDrawerOpen(false)}
+            onClick={closeDrawer}
             aria-hidden="true"
           />
 
           {/* Drawer Content */}
           <div className="fixed top-0 left-0 h-screen w-[280px] max-w-[85vw] bg-surface shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out translate-x-0">
-            <Sidebar onClose={() => setIsDrawerOpen(false)} isDrawer className="w-full h-full border-r-0" />
+            <Sidebar onClose={closeDrawer} isDrawer className="w-full h-full border-r-0" />
           </div>
         </div>
       )}
@@ -270,3 +279,4 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
+

@@ -2,8 +2,8 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
+import ErrorBoundary from '../components/ErrorBoundary';
 
-// Lazy loaded pages
 // Lazy loaded pages
 const Login             = React.lazy(() => import('../pages/Login'));
 const Registration      = React.lazy(() => import('../pages/Registration'));
@@ -93,7 +93,7 @@ const AppRouter: React.FC = () => {
           />
           <Route path="/search"           element={<ProtectedRoute><SearchBooks /></ProtectedRoute>} />
           <Route path="/recommendations"  element={<ProtectedRoute><OnboardingRoute><Recommendations /></OnboardingRoute></ProtectedRoute>} />
-          <Route path="/book/:id"          element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
+          <Route path="/book/:id"          element={<ProtectedRoute><ErrorBoundary fallbackMessage="Unable to display book details."><BookDetails /></ErrorBoundary></ProtectedRoute>} />
           <Route path="/favorites"         element={<ProtectedRoute><OnboardingRoute><Favorites /></OnboardingRoute></ProtectedRoute>} />
           <Route path="/history"           element={<ProtectedRoute><OnboardingRoute><ReadingHistory /></OnboardingRoute></ProtectedRoute>} />
           <Route path="/collections"       element={<ProtectedRoute><OnboardingRoute><Collections /></OnboardingRoute></ProtectedRoute>} />

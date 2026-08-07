@@ -134,11 +134,13 @@ const Home: React.FC = () => {
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-container shrink-0">
                     <img src={user?.avatar?.includes('/') ? user.avatar : `/avatars/${user?.avatar || 'avatar1.png'}`} alt="Avatar" className="w-full h-full object-cover" onError={(e) => { if (!(e.target as HTMLImageElement).src.endsWith('/avatars/avatar1.png')) { (e.target as HTMLImageElement).src = '/avatars/avatar1.png'; } }} />
                   </div>
-                  <div>
-                    <h2 className="text-xl sm:text-2xl lg:text-[32px] font-semibold leading-tight tracking-tight text-primary flex items-center gap-2">
-                      {timeGreeting}, {firstName} 👋
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg sm:text-2xl lg:text-[32px] font-semibold leading-tight tracking-tight text-primary flex flex-wrap items-center gap-1.5">
+                      <span>{timeGreeting},</span>
+                      <span className="truncate">{firstName}</span>
+                      <span>👋</span>
                     </h2>
-                    <p className="text-xs sm:text-base text-on-surface-variant">Ready to discover your next favorite book?</p>
+                    <p className="text-xs sm:text-base text-on-surface-variant mt-0.5 opacity-80 leading-snug">Ready to discover your next favorite book?</p>
                   </div>
                 </div>
                 {/* KPI Grid */}
