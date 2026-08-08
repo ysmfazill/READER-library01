@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import AppLayout from '../components/AppLayout';
@@ -45,9 +45,34 @@ const BookDetails: React.FC = () => {
 
   // Reviews state
   const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsError, setReviewsError] = useState(false);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Load reviews independently
+  const loadReviews = useCallback(async (bookId: string) => {
+    setReviewsError(false);
+    try {
+      const reviewRes: any = await reviewService.getReviewsByBook(bookId, 0, 50);
+      const raw = reviewRes?.data !== undefined ? reviewRes.data : reviewRes;
+      const reviewList =
+        Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.content)
+            ? raw.content
+            : Array.isArray(raw?.data?.content)
+              ? raw.data.content
+              : Array.isArray(raw?.data)
+                ? raw.data
+                : [];
+      setReviews(reviewList.filter(Boolean));
+    } catch (err) {
+      console.error('Failed to load reviews:', err);
+      setReviews([]);
+      setReviewsError(true);
+    }
+  }, []);
 
   // Load book from API
   useEffect(() => {
@@ -61,12 +86,12 @@ const BookDetails: React.FC = () => {
     setError(null);
     setBook(null);
     setReviews([]);
+    setReviewsError(false);
     setSimilarBooks([]);
 
     bookService.getBookById(id)
       .then((res: any) => {
         if (cancelled) return;
-        // Handle Spring Boot ApiResponse wrapping or raw object
         const dto = res?.data !== undefined ? res.data : res;
         if (!dto || typeof dto !== 'object' || (!dto.id && !dto.title)) {
           setError('Book not found.');
@@ -81,31 +106,25 @@ const BookDetails: React.FC = () => {
         }
         setBook(mapped);
 
-        // Fetch similar books
+        // Fetch similar books (non-blocking)
         recommendationService.getSimilarBooks(mapped.id, 3)
-          .then(books => {
+          .then((books: any) => {
             if (cancelled) return;
-            setSimilarBooks(Array.isArray(books) ? books : []);
+            const raw = books?.data !== undefined ? books.data : books;
+            const bookList = Array.isArray(raw) ? raw : (Array.isArray(raw?.content) ? raw.content : []);
+            setSimilarBooks(bookList.filter(Boolean));
           })
           .catch(() => {
             if (!cancelled) setSimilarBooks([]);
           });
 
-        // Fetch reviews
-        reviewService.getReviewsByBook(mapped.id, 0, 50)
-          .then((reviewRes: any) => {
-            if (cancelled) return;
-            const reviewList = reviewRes?.data?.content || reviewRes?.content || reviewRes?.data || (Array.isArray(reviewRes) ? reviewRes : []);
-            setReviews(Array.isArray(reviewList) ? reviewList : []);
-          })
-          .catch(() => {
-            if (!cancelled) setReviews([]);
-          });
+        // Fetch reviews (non-blocking)
+        loadReviews(mapped.id);
       })
       .catch((err: any) => {
         if (!cancelled) {
           console.error('Failed to load book details:', err);
-          setError('Book not found.');
+          setError('Unable to load this book.');
           setBook(null);
         }
       })
@@ -114,15 +133,19 @@ const BookDetails: React.FC = () => {
       });
 
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, loadReviews]);
 
   const entry = book ? getEntry(book.id) : undefined;
   const reading = book ? isReading(book.id) : false;
   const completed = book ? isCompleted(book.id) : false;
   const favorited = book ? isFavorite(book.id) : false;
 
-  const safeReviews = Array.isArray(reviews) ? reviews : [];
-  const safeSimilarBooks = Array.isArray(similarBooks) ? similarBooks : [];
+  const safeReviews = Array.isArray(reviews) ? reviews.filter(Boolean) : [];
+  const safeSimilarBooks = Array.isArray(similarBooks) ? similarBooks.filter(Boolean) : [];
+
+  const hasReviewed = safeReviews.some(
+    r => r && String(r.userId) === String(user?.id)
+  );
 
   const handleFavorite = async () => {
     if (!book || favoriteLoading) return;
@@ -135,13 +158,10 @@ const BookDetails: React.FC = () => {
     if (!book || !user || !reviewRating || submittingReview) return;
     setSubmittingReview(true);
     try {
-      const res = await reviewService.addReview(user.id, parseInt(book.id, 10), reviewRating, reviewText);
-      const newReview = res?.data || res;
-      if (newReview && typeof newReview === 'object') {
-        setReviews(prev => [newReview, ...(Array.isArray(prev) ? prev : [])]);
-      }
+      await reviewService.addReview(user.id, parseInt(book.id, 10), reviewRating, reviewText);
       setReviewText('');
       setReviewRating(0);
+      await loadReviews(book.id);
     } catch (err) {
       console.error('Failed to submit review', err);
       alert('You have already reviewed this book or an error occurred.');
@@ -154,11 +174,17 @@ const BookDetails: React.FC = () => {
     try {
       if (currentlyLiked) {
         await reviewService.unlikeReview(reviewId);
-        setReviews(safeReviews.map(r => r.id === reviewId ? { ...r, isLikedByCurrentUser: false, likesCount: Math.max(0, (r.likesCount || 0) - 1) } : r));
       } else {
         await reviewService.likeReview(reviewId);
-        setReviews(safeReviews.map(r => r.id === reviewId ? { ...r, isLikedByCurrentUser: true, likesCount: (r.likesCount || 0) + 1 } : r));
       }
+      setReviews(prev => {
+        const current = Array.isArray(prev) ? prev.filter(Boolean) : safeReviews;
+        return current.map(r => (r && r.id === reviewId) ? {
+          ...r,
+          isLikedByCurrentUser: !currentlyLiked,
+          likesCount: currentlyLiked ? Math.max(0, (r.likesCount || 0) - 1) : (r.likesCount || 0) + 1
+        } : r);
+      });
     } catch (err) {
       console.error('Failed to like/unlike review', err);
     }
@@ -168,7 +194,9 @@ const BookDetails: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this review?')) return;
     try {
       await reviewService.deleteReview(reviewId);
-      setReviews(safeReviews.filter(r => r.id !== reviewId));
+      if (book) {
+        await loadReviews(book.id);
+      }
     } catch (err) {
       console.error('Failed to delete review', err);
     }
@@ -187,9 +215,11 @@ const BookDetails: React.FC = () => {
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center min-h-[50vh]">
           <span className="material-symbols-outlined text-5xl sm:text-6xl text-primary/30 mb-4">menu_book</span>
-          <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-2">Book Not Found</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-2">
+            {error === 'Book not found.' ? 'Book Not Found' : 'Unable to Load Book'}
+          </h2>
           <p className="text-xs sm:text-sm text-on-surface-variant mb-6 max-w-md">
-            This book doesn't exist, was removed, or couldn't be loaded at this time.
+            {error || "This book doesn't exist, was removed, or couldn't be loaded at this time."}
           </p>
           <button
             onClick={() => navigate('/search')}
@@ -259,7 +289,7 @@ const BookDetails: React.FC = () => {
             {/* Tags */}
             <div className="flex flex-wrap gap-2">
               <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-semibold">{book.category}</span>
-              {book.keywords?.slice(0, 2).map(kw => (
+              {Array.isArray(book.keywords) && book.keywords.slice(0, 2).map(kw => (
                 <span key={kw} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-semibold">{kw}</span>
               ))}
             </div>
@@ -406,7 +436,7 @@ const BookDetails: React.FC = () => {
             <h3 className="text-xl sm:text-2xl font-bold text-on-surface mb-6">Reviews & Ratings</h3>
 
             {/* Write Review */}
-            {!safeReviews.some(r => r.userId === user?.id) && (
+            {Boolean(user?.id) && !hasReviewed && (
               <div className="bg-surface-container-low p-5 sm:p-6 rounded-2xl mb-8 border border-outline-variant/30">
                 <h4 className="font-bold text-on-surface mb-3 text-sm sm:text-base">Write a Review</h4>
                 <div className="flex gap-2 mb-4">
@@ -434,10 +464,16 @@ const BookDetails: React.FC = () => {
               </div>
             )}
 
-            {/* Review List */}
+            {/* Review List / Error / Empty States */}
             <div className="space-y-4 sm:space-y-6">
-              {safeReviews.length === 0 ? (
-                <p className="text-on-surface-variant opacity-70 text-sm">No reviews yet. Be the first to review this book!</p>
+              {reviewsError ? (
+                <p className="text-on-surface-variant opacity-70 text-sm italic">
+                  Reviews are currently unavailable.
+                </p>
+              ) : safeReviews.length === 0 ? (
+                <p className="text-on-surface-variant opacity-70 text-sm">
+                  No reviews yet. Be the first to review this book!
+                </p>
               ) : (
                 safeReviews.map(review => {
                   const authorName = review.userName || 'Anonymous Reader';

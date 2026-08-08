@@ -3,12 +3,25 @@ import { api } from './api';
 export const interestService = {
   /**
    * Get all available interest categories in the system (for Welcome/onboarding page).
-   * GET /api/interests — returns full list without passing invalid userId=0
+   * Calls /api/interests/all, with /api/categories fallback.
    */
   getAllInterests: async () => {
-    const res = await api.get('/interests');
-    const data = res.data?.data || res.data;
-    return Array.isArray(data) ? data : (data?.content || []);
+    try {
+      const res = await api.get('/interests/all');
+      const data = res.data?.data || res.data;
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.content) ? data.content : []);
+      if (list.length > 0) return list;
+    } catch {
+      /* fallback to /categories */
+    }
+
+    try {
+      const res = await api.get('/categories');
+      const data = res.data?.data || res.data;
+      return Array.isArray(data) ? data : (Array.isArray(data?.content) ? data.content : []);
+    } catch {
+      return [];
+    }
   },
 
   /**
@@ -17,9 +30,13 @@ export const interestService = {
    */
   getUserInterests: async (userId: number) => {
     if (!userId || userId <= 0) return [];
-    const res = await api.get('/interests', { params: { userId } });
-    const data = res.data?.data || res.data;
-    return Array.isArray(data) ? data : (data?.content || []);
+    try {
+      const res = await api.get('/interests', { params: { userId } });
+      const data = res.data?.data || res.data;
+      return Array.isArray(data) ? data : (Array.isArray(data?.content) ? data.content : []);
+    } catch {
+      return [];
+    }
   },
 
   /**

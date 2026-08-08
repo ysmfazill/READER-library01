@@ -28,12 +28,14 @@ const Collections: React.FC = () => {
     }
   };
 
+  const safeCollections = Array.isArray(collections) ? collections.filter(Boolean) : [];
+
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColName.trim()) return;
     try {
       const newCol = await collectionService.createCollection(newColName.trim());
-      setCollections([...collections, newCol]);
+      setCollections([...safeCollections, newCol]);
       setNewColName('');
       setActiveColId(newCol.id);
     } catch (error) {
@@ -45,16 +47,17 @@ const Collections: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this collection?')) return;
     try {
       await collectionService.deleteCollection(id);
-      setCollections(collections.filter(c => c.id !== id));
+      setCollections(safeCollections.filter(c => c.id !== id));
       if (activeColId === id) {
-        setActiveColId(collections[0]?.id || null);
+        setActiveColId(safeCollections[0]?.id || null);
       }
     } catch (error) {
       console.error('Failed to delete collection:', error);
     }
   };
 
-  const activeCollection = collections.find(c => c.id === activeColId);
+  const activeCollection = safeCollections.find(c => c.id === activeColId);
+  const activeBooks = Array.isArray(activeCollection?.books) ? activeCollection.books.filter(Boolean) : [];
 
   return (
     <AppLayout>
@@ -88,23 +91,26 @@ const Collections: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 max-h-60 lg:max-h-none overflow-y-auto custom-scrollbar">
-                    {collections.map(col => (
-                      <div 
-                        key={col.id} 
-                        onClick={() => setActiveColId(col.id)}
-                        className={`p-3 rounded-xl cursor-pointer flex items-center justify-between transition-colors min-h-[44px] ${activeColId === col.id ? 'bg-primary/10 border-primary/30 border font-semibold' : 'bg-surface-container-low hover:bg-surface-container'}`}
-                      >
-                        <div className="flex items-center gap-2.5 truncate">
-                          <span className="material-symbols-outlined text-primary/70 text-[20px]">
-                            {col.isSystem ? 'bookmark_star' : 'folder'}
-                          </span>
-                          <span className="text-xs sm:text-sm truncate">{col.name}</span>
+                    {safeCollections.map(col => {
+                      const count = Array.isArray(col.books) ? col.books.length : 0;
+                      return (
+                        <div 
+                          key={col.id} 
+                          onClick={() => setActiveColId(col.id)}
+                          className={`p-3 rounded-xl cursor-pointer flex items-center justify-between transition-colors min-h-[44px] ${activeColId === col.id ? 'bg-primary/10 border-primary/30 border font-semibold' : 'bg-surface-container-low hover:bg-surface-container'}`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <span className="material-symbols-outlined text-primary/70 text-[20px]">
+                              {col.isSystem ? 'bookmark_star' : 'folder'}
+                            </span>
+                            <span className="text-xs sm:text-sm truncate">{col.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] sm:text-xs bg-surface-container-highest px-2 py-0.5 rounded-full font-bold">{count}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] sm:text-xs bg-surface-container-highest px-2 py-0.5 rounded-full font-bold">{col.books.length}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -122,7 +128,7 @@ const Collections: React.FC = () => {
                           )}
                         </h2>
                         <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
-                          {activeCollection.books.length} books in this collection
+                          {activeBooks.length} books in this collection
                         </p>
                       </div>
                       {!activeCollection.isSystem && (
@@ -136,7 +142,7 @@ const Collections: React.FC = () => {
                       )}
                     </div>
 
-                    {activeCollection.books.length === 0 ? (
+                    {activeBooks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center opacity-70">
                         <span className="material-symbols-outlined text-5xl mb-3">menu_book</span>
                         <p className="text-base font-semibold">This collection is empty</p>
@@ -144,7 +150,7 @@ const Collections: React.FC = () => {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {activeCollection.books.map(book => (
+                        {activeBooks.map(book => (
                           <BookCard key={book.id} book={book} />
                         ))}
                       </div>
