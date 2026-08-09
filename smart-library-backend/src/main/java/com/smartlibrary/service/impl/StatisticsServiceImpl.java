@@ -9,16 +9,22 @@ import com.smartlibrary.repository.UserStatisticsRepository;
 import com.smartlibrary.service.AchievementService;
 import com.smartlibrary.service.StatisticsService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -27,11 +33,25 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final UserStatisticsRepository statisticsRepository;
     private final UserRepository userRepository;
     private final AchievementService achievementService;
+    private final CacheManager cacheManager;
 
     public StatisticsServiceImpl(UserStatisticsRepository statisticsRepository, UserRepository userRepository, AchievementService achievementService) {
+        this(statisticsRepository, userRepository, achievementService, Optional.empty());
+    }
+
+    public StatisticsServiceImpl(UserStatisticsRepository statisticsRepository, UserRepository userRepository, AchievementService achievementService, CacheManager cacheManager) {
+        this(statisticsRepository, userRepository, achievementService, Optional.ofNullable(cacheManager));
+    }
+
+    @Autowired
+    public StatisticsServiceImpl(UserStatisticsRepository statisticsRepository,
+                                 UserRepository userRepository,
+                                 AchievementService achievementService,
+                                 Optional<CacheManager> cacheManager) {
         this.statisticsRepository = statisticsRepository;
         this.userRepository = userRepository;
         this.achievementService = achievementService;
+        this.cacheManager = cacheManager.orElse(null);
     }
 
     @Override
@@ -104,12 +124,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable("monthlyLeaderboard")
     public List<LeaderboardEntryDTO> getMonthlyLeaderboard() {
         return getLeaderboard(10);
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable("allTimeLeaderboard")
     public List<LeaderboardEntryDTO> getAllTimeLeaderboard() {
         return getLeaderboard(10);
@@ -138,9 +160,20 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Scheduled(cron = "0 0 * * * *") // Every hour
     @CacheEvict(value = {"monthlyLeaderboard", "allTimeLeaderboard"}, allEntries = true)
+    @Transactional(readOnly = true)
     public void refreshLeaderboards() {
         log.info("Refreshing leaderboards cache...");
-        getMonthlyLeaderboard();
-        getAllTimeLeaderboard();
+        List<LeaderboardEntryDTO> monthly = getMonthlyLeaderboard();
+        List<LeaderboardEntryDTO> allTime = getAllTimeLeaderboard();
+        if (cacheManager != null) {
+            Cache monthlyCache = cacheManager.getCache("monthlyLeaderboard");
+            if (monthlyCache != null) {
+                monthlyCache.put(SimpleKey.EMPTY, monthly);
+            }
+            Cache allTimeCache = cacheManager.getCache("allTimeLeaderboard");
+            if (allTimeCache != null) {
+                allTimeCache.put(SimpleKey.EMPTY, allTime);
+            }
+        }
     }
 }
